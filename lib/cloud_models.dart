@@ -176,3 +176,110 @@ class InstitutionTrip {
   final bool isPaid;
   final String? paymentMethod;
 }
+
+class InstitutionDocumentDetails {
+  const InstitutionDocumentDetails({
+    required this.name,
+    required this.commercialRegistration,
+    required this.taxNumber,
+    required this.address,
+    required this.phone,
+    required this.email,
+  });
+
+  final String name;
+  final String commercialRegistration;
+  final String taxNumber;
+  final String address;
+  final String phone;
+  final String email;
+
+  factory InstitutionDocumentDetails.fromMap(Map<String, dynamic> map) => InstitutionDocumentDetails(
+        name: map['name'] as String,
+        commercialRegistration: map['commercial_registration'] as String,
+        taxNumber: map['tax_number'] as String,
+        address: map['address'] as String,
+        phone: map['phone'] as String,
+        email: map['email'] as String,
+      );
+}
+
+class QuotationItemRecord {
+  const QuotationItemRecord({
+    required this.inventoryId,
+    required this.name,
+    required this.color,
+    required this.length,
+    required this.width,
+    required this.area,
+    required this.pricePerSquareMeter,
+    required this.lineTotal,
+  });
+
+  final String inventoryId;
+  final String name;
+  final String color;
+  final double length;
+  final double width;
+  final double area;
+  final double pricePerSquareMeter;
+  final double lineTotal;
+
+  factory QuotationItemRecord.fromMap(Map<String, dynamic> map) => QuotationItemRecord(
+        inventoryId: map['inventory_id'] as String,
+        name: map['item_name'] as String,
+        color: map['color'] as String,
+        length: (map['length'] as num).toDouble(),
+        width: (map['width'] as num).toDouble(),
+        area: (map['area'] as num).toDouble(),
+        pricePerSquareMeter: (map['price_per_sqm'] as num).toDouble(),
+        lineTotal: (map['line_total'] as num).toDouble(),
+      );
+}
+
+class QuotationRecord {
+  const QuotationRecord({
+    required this.id,
+    required this.customerName,
+    required this.customerCommercialRegistration,
+    required this.customerTaxNumber,
+    required this.issueDate,
+    required this.validUntil,
+    required this.notes,
+    required this.subtotal,
+    required this.vatAmount,
+    required this.total,
+    required this.status,
+    required this.items,
+  });
+
+  final String id;
+  final String customerName;
+  final String customerCommercialRegistration;
+  final String customerTaxNumber;
+  final DateTime issueDate;
+  final DateTime validUntil;
+  final String notes;
+  final double subtotal;
+  final double vatAmount;
+  final double total;
+  final String status;
+  final List<QuotationItemRecord> items;
+
+  factory QuotationRecord.fromMap(Map<String, dynamic> map) => QuotationRecord(
+        id: map['id'] as String,
+        customerName: map['customer_name'] as String,
+        customerCommercialRegistration: map['customer_commercial_registration'] as String,
+        customerTaxNumber: map['customer_tax_number'] as String,
+        issueDate: DateTime.parse(map['issue_date'] as String),
+        validUntil: DateTime.parse(map['valid_until'] as String),
+        notes: map['notes'] as String,
+        subtotal: (map['subtotal'] as num).toDouble(),
+        vatAmount: (map['vat_amount'] as num).toDouble(),
+        total: (map['total'] as num).toDouble(),
+        status: map['status'] as String,
+        items: (map['quotation_items'] as List)
+            .map((item) => QuotationItemRecord.fromMap(item as Map<String, dynamic>))
+            .toList(),
+      );
+}

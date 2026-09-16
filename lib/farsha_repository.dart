@@ -264,4 +264,58 @@ class FarshaRepository {
   Future<void> payDriverTrip(String tripId, String method) async {
     await client.rpc('pay_driver_trip', params: {'p_trip_id': tripId, 'p_method': method});
   }
+
+  Future<InstitutionDocumentDetails> loadInstitutionDocumentDetails(String institutionId) async {
+    final row = await client
+        .from('institutions')
+        .select('name,commercial_registration,tax_number,address,phone,email')
+        .eq('id', institutionId)
+        .single();
+    return InstitutionDocumentDetails.fromMap(row);
+  }
+
+  Future<List<QuotationRecord>> loadQuotations(String institutionId) async {
+    final rows = await client
+        .from('quotations')
+        .select('id,customer_name,customer_commercial_registration,customer_tax_number,issue_date,valid_until,notes,subtotal,vat_amount,total,status,quotation_items(inventory_id,item_name,color,length,width,area,price_per_sqm,line_total)')
+        .eq('institution_id', institutionId)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .map((row) => QuotationRecord.fromMap(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<String> createQuotation({
+    required String institutionId,
+    required String sellerId,
+    required String inventoryId,
+    required String customerName,
+    required String customerCommercialRegistration,
+    required String customerTaxNumber,
+    required double length,
+    required double pricePerSquareMeter,
+    required DateTime validUntil,
+    String notes = '',
+  }) async {
+    final result = await client.rpc('create_quotation', params: {
+      'p_institution_id': institutionId,
+      'p_seller_id': sellerId,
+      'p_inventory_id': inventoryId,
+      'p_customer_name': customerName.trim(),
+      'p_customer_cr': customerCommercialRegistration.trim(),
+      'p_customer_tax': customerTaxNumber.trim(),
+      'p_length': length,
+      'p_price_per_sqm': pricePerSquareMeter,
+      'p_valid_until': validUntil.toIso8601String().split('T').first,
+      'p_notes': notes.trim(),
+    });
+    return result as String;
+  }
+
+  Future<void> convertQuotationToSale(String quotationId, String paymentMethod) async {
+    await client.rpc('convert_quotation_to_sale', params: {
+      'p_quotation_id': quotationId,
+      'p_payment_method': paymentMethod,
+    });
+  }
 }

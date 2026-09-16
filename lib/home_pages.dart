@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'cloud_models.dart';
 import 'farsha_repository.dart';
 import 'operations_pages.dart';
+import 'quotation_page.dart';
 
 class ProfileRouter extends StatefulWidget {
   const ProfileRouter({super.key});
@@ -218,9 +219,10 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
       InstitutionOverview(membership: widget.membership, repository: widget.repository),
       if (manager) MembersPage(membership: widget.membership, repository: widget.repository),
       InstitutionOperationsPage(membership: widget.membership, repository: widget.repository),
+      QuotationsPage(membership: widget.membership, repository: widget.repository),
       SalesSettlementPage(membership: widget.membership, repository: widget.repository),
     ];
-    final labels = <String>['الرئيسية', if (manager) 'المستخدمون', 'المخزون', 'البيع'];
+    final labels = <String>['الرئيسية', if (manager) 'المستخدمون', 'المخزون', 'العروض', 'البيع'];
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.membership.institutionName),
@@ -241,6 +243,7 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
         'الرئيسية' => Icons.home_outlined,
         'المستخدمون' => Icons.people_outline,
         'المخزون' => Icons.inventory_2_outlined,
+        'العروض' => Icons.request_quote_outlined,
         _ => Icons.point_of_sale,
       };
 }
