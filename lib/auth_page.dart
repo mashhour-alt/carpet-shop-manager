@@ -21,6 +21,7 @@ class AuthPage extends StatefulWidget {
 class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
+  final _email = TextEditingController();
   final _phone = TextEditingController(text: '+966');
   final _password = TextEditingController();
   bool _register = false;
@@ -31,6 +32,7 @@ class _AuthPageState extends State<AuthPage> {
   @override
   void dispose() {
     _name.dispose();
+    _email.dispose();
     _phone.dispose();
     _password.dispose();
     super.dispose();
@@ -43,7 +45,7 @@ class _AuthPageState extends State<AuthPage> {
       final auth = Supabase.instance.client.auth;
       if (_register) {
         final response = await auth.signUp(
-          phone: _phone.text.trim(),
+          email: _email.text.trim(),
           password: _password.text,
           data: {
             'full_name': _name.text.trim(),
@@ -53,11 +55,12 @@ class _AuthPageState extends State<AuthPage> {
           },
         );
         if (response.session == null && mounted) {
-          await _verifySignupCode();
+          setState(() => _register = false);
+          _message('فتح رسالة التأكيد في بريدك، ثم ارجع وسجّل الدخول.');
         }
       } else {
         await auth.signInWithPassword(
-          phone: _phone.text.trim(),
+          email: _email.text.trim(),
           password: _password.text,
         );
       }
@@ -67,64 +70,6 @@ class _AuthPageState extends State<AuthPage> {
       if (mounted) _message('تعذر الاتصال. حاول مرة أخرى.', error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _verifySignupCode() async {
-    final code = TextEditingController();
-    final verified = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('تأكيد رقم الجوال'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('أدخل الرمز المرسل إلى ${_phone.text.trim()}'),
-            const SizedBox(height: 14),
-            TextField(
-              controller: code,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              textDirection: TextDirection.ltr,
-              maxLength: 6,
-              decoration: const InputDecoration(labelText: 'رمز التحقق'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('لاحقًا'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final token = code.text.trim();
-              if (token.length != 6) return;
-              try {
-                await Supabase.instance.client.auth.verifyOTP(
-                  phone: _phone.text.trim(),
-                  token: token,
-                  type: OtpType.signup,
-                );
-                if (dialogContext.mounted) Navigator.pop(dialogContext, true);
-              } on AuthException catch (error) {
-                if (dialogContext.mounted) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    SnackBar(content: Text(error.message)),
-                  );
-                }
-              }
-            },
-            child: const Text('تأكيد'),
-          ),
-        ],
-      ),
-    );
-    code.dispose();
-    if (verified == false && mounted) {
-      setState(() => _register = false);
-      _message('أكّد الرقم عند محاولة الدخول القادمة.');
     }
   }
 
@@ -176,14 +121,26 @@ class _AuthPageState extends State<AuthPage> {
                       const SizedBox(height: 12),
                     ],
                     TextFormField(
-                      controller: _phone,
-                      keyboardType: TextInputType.phone,
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
                       textDirection: TextDirection.ltr,
-                      decoration: const InputDecoration(labelText: 'رقم الجوال بصيغة دولية', hintText: '+9665xxxxxxxx'),
-                      validator: (value) => value == null || !value.trim().startsWith('+') || value.trim().length < 10
-                          ? 'اكتب رقمًا صحيحًا يبدأ بمفتاح الدولة'
+                      decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
+                      validator: (value) => value == null || !value.trim().contains('@')
+                          ? 'اكتب بريدًا صحيحًا'
                           : null,
                     ),
+                    if (_register) ...[
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _phone,
+                        keyboardType: TextInputType.phone,
+                        textDirection: TextDirection.ltr,
+                        decoration: const InputDecoration(labelText: 'رقم الجوال بصيغة دولية', hintText: '+9665xxxxxxxx'),
+                        validator: (value) => value == null || !value.trim().startsWith('+') || value.trim().length < 10
+                            ? 'اكتب رقمًا صحيحًا يبدأ بمفتاح الدولة'
+                            : null,
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _password,

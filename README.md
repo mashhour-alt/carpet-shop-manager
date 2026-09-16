@@ -30,6 +30,14 @@ Build with these compile-time values:
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
 
+The checked-in defaults point to the Farsha Supabase project and contain only
+the client-safe publishable key. GitHub variables can override them for another
+environment.
+
+Authentication currently uses email and password while the user's Saudi phone
+number is stored in their profile and used for invitations. This avoids paid
+SMS-provider setup; phone OTP can be enabled later if required.
+
 Only the publishable client key belongs in the Android app. Never add a secret
 or service-role key to Flutter or GitHub source.
 
