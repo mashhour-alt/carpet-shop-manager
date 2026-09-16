@@ -4,11 +4,13 @@ import 'models.dart';
 
 void main() => runApp(const CarpetShopManager());
 
+const farshaLogo = 'assets/images/farsha_logo.jpeg';
+
 class CarpetShopManager extends StatelessWidget {
   const CarpetShopManager({super.key});
   @override Widget build(BuildContext context) => MaterialApp(
-    debugShowCheckedModeBanner: false, title: 'إدارة الموكيت', locale: const Locale('ar'),
-    theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xff075c55), scaffoldBackgroundColor: const Color(0xfff7f8f6), inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder(), filled: true, fillColor: Colors.white)),
+    debugShowCheckedModeBanner: false, title: 'فرشة', locale: const Locale('ar'),
+    theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xff8f1423), scaffoldBackgroundColor: const Color(0xfff7f3ea), inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder(), filled: true, fillColor: Colors.white)),
     builder: (_, child) => Directionality(textDirection: TextDirection.rtl, child: child!), home: const StartGate(),
   );
 }
@@ -17,8 +19,31 @@ class StartGate extends StatefulWidget { const StartGate({super.key}); @override
 class _StartGateState extends State<StartGate> {
   late Future<List<Institution>> _institutions;
   @override void initState(){super.initState();_institutions=ShopDatabase.instance.institutions();}
-  @override Widget build(BuildContext context)=>FutureBuilder<List<Institution>>(future:_institutions,builder:(context,s){ if(!s.hasData)return const Scaffold(body:Center(child:CircularProgressIndicator())); if(s.data!.isEmpty)return const InstitutionForm(); return InstitutionPicker(institutions:s.data!);});
+  @override Widget build(BuildContext context)=>FutureBuilder<List<Institution>>(future:_institutions,builder:(context,s){ if(!s.hasData)return const FarshaLoadingScreen(); if(s.data!.isEmpty)return const InstitutionForm(); return InstitutionPicker(institutions:s.data!);});
 }
+
+class FarshaLoadingScreen extends StatelessWidget {
+  const FarshaLoadingScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: Image.asset(farshaLogo, width: 180, height: 180, fit: BoxFit.cover),
+              ),
+              const SizedBox(height: 20),
+              const Text('فرشة', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800)),
+              const Text('إدارة مؤسسات ومحلات الموكيت'),
+              const SizedBox(height: 24),
+              const CircularProgressIndicator(),
+            ],
+          ),
+        ),
+      );
 
 class InstitutionPicker extends StatelessWidget {
   const InstitutionPicker({super.key, required this.institutions});
@@ -26,10 +51,19 @@ class InstitutionPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('مؤسسة / سائق')),
+        appBar: AppBar(title: const Text('فرشة')),
         body: ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Image.asset(farshaLogo, width: 130, height: 130, fit: BoxFit.cover),
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text('مؤسسة / سائق', textAlign: TextAlign.center, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 24),
             const Text('اختر المؤسسة للدخول', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ...institutions.map(
@@ -65,7 +99,7 @@ class _InstitutionFormState extends State<InstitutionForm>{ final form=GlobalKey
   double num(TextEditingController c)=>double.tryParse(c.text.replaceAll(',','.'))??0;
   Future<void> save()async{if(!form.currentState!.validate())return; final id=await ShopDatabase.instance.addInstitution(Institution(name:n.text.trim(),commercialRegistration:cr.text.trim(),taxNumber:tax.text.trim(),address:a.text.trim(),phone:p.text.trim(),email:e.text.trim(),visaFee:num(visa)/100,tabbyFee:num(tabby)/100,tamaraFee:num(tamara)/100));if(!mounted)return;Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>UserSetup(institutionId:id,institutionName:n.text.trim())),(_)=>false);}
   @override void dispose(){for(final x in[n,cr,tax,a,p,e,visa,tabby,tamara]){x.dispose();}super.dispose();}
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('إنشاء مؤسسة')),body:Form(key:form,child:ListView(padding:const EdgeInsets.all(18),children:[const Text('بيانات المؤسسة',style:TextStyle(fontSize:23,fontWeight:FontWeight.bold)),const Text('تُطبع تلقائيًا في عروض الأسعار والفواتير.'),gap,field(n,'اسم المؤسسة'),gap,field(cr,'السجل التجاري'),gap,field(tax,'الرقم الضريبي'),gap,field(a,'العنوان'),gap,field(p,'الهاتف'),gap,field(e,'البريد الإلكتروني',email:true),const SizedBox(height:18),const Text('رسوم الدفع (%)',style:TextStyle(fontWeight:FontWeight.bold)),gap,Row(children:[Expanded(child:number(visa,'Visa')),const SizedBox(width:8),Expanded(child:number(tabby,'Tabby')),const SizedBox(width:8),Expanded(child:number(tamara,'Tamara'))]),const SizedBox(height:24),FilledButton(onPressed:save,child:const Padding(padding:EdgeInsets.all(14),child:Text('حفظ المؤسسة وإنشاء المستخدمين')))])));
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('فرشة — إنشاء مؤسسة')),body:Form(key:form,child:ListView(padding:const EdgeInsets.all(18),children:[Center(child:ClipRRect(borderRadius:BorderRadius.circular(22),child:Image.asset(farshaLogo,width:110,height:110,fit:BoxFit.cover))),const SizedBox(height:18),const Text('بيانات المؤسسة',style:TextStyle(fontSize:23,fontWeight:FontWeight.bold)),const Text('تُطبع تلقائيًا في عروض الأسعار والفواتير.'),gap,field(n,'اسم المؤسسة'),gap,field(cr,'السجل التجاري'),gap,field(tax,'الرقم الضريبي'),gap,field(a,'العنوان'),gap,field(p,'الهاتف'),gap,field(e,'البريد الإلكتروني',email:true),const SizedBox(height:18),const Text('رسوم الدفع (%)',style:TextStyle(fontWeight:FontWeight.bold)),gap,Row(children:[Expanded(child:number(visa,'Visa')),const SizedBox(width:8),Expanded(child:number(tabby,'Tabby')),const SizedBox(width:8),Expanded(child:number(tamara,'Tamara'))]),const SizedBox(height:24),FilledButton(onPressed:save,child:const Padding(padding:EdgeInsets.all(14),child:Text('حفظ المؤسسة وإنشاء المستخدمين')))])));
   TextFormField field(TextEditingController c,String label,{bool email=false})=>TextFormField(controller:c,keyboardType:email?TextInputType.emailAddress:TextInputType.text,decoration:InputDecoration(labelText:label),validator:(v)=>(v==null||v.trim().isEmpty)?'هذا الحقل مطلوب':null);
   TextFormField number(TextEditingController c,String l)=>TextFormField(controller:c,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:InputDecoration(labelText:l));
 }

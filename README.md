@@ -1,4 +1,4 @@
-# carpet-shop-manager
+# فرشة | FARSHA
 
 Flutter Android application for Saudi carpet-shop operations.
 
@@ -18,4 +18,4 @@ The project starts without sample data and persists operational data in SQLite o
 
 ## Build
 
-GitHub Actions builds an installable release APK when a GitHub Release is published or from **Actions → Build Android Release APK → Run workflow**. The output is attached as the `carpet-shop-manager-release-apk` artifact.
+GitHub Actions builds an installable release APK when a GitHub Release is published or from **Actions → Build Android Release APK → Run workflow**. The output is attached as the `farsha-release-apk` artifact.

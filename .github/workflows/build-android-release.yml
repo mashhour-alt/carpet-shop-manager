@@ -26,9 +26,13 @@ jobs:
           channel: stable
           cache: true
       - name: Generate Android host project
-        run: flutter create --platforms=android --project-name carpet_shop_manager --org sa.carpetshop.manager .
+        run: flutter create --platforms=android --project-name farsha --org sa.farsha.app .
       - name: Install packages
         run: flutter pub get
+      - name: Apply Farsha name and launcher icon
+        run: |
+          sed -i 's/android:label="farsha"/android:label="فرشة"/' android/app/src/main/AndroidManifest.xml
+          dart run flutter_launcher_icons
       - name: Static analysis and tests
         run: |
           flutter analyze
@@ -38,7 +42,7 @@ jobs:
       - name: Publish APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: carpet-shop-manager-release-apk
+          name: farsha-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 90
