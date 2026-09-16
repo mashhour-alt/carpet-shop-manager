@@ -44,6 +44,7 @@ class FarshaLoadingScreen extends StatelessWidget {
           ),
         ),
       );
+}
 
 class InstitutionPicker extends StatelessWidget {
   const InstitutionPicker({super.key, required this.institutions});
