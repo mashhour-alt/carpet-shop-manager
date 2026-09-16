@@ -181,7 +181,7 @@ class FarshaRepository {
     return rows.where((row) => row['connection_status'] == 'active' && row['is_available'] == true).map((row) => PersonOption(id: row['driver_id'] as String, name: row['full_name'] as String, phone: row['phone'] as String)).toList();
   }
 
-  Future<void> recordSale({required String institutionId, required String inventoryId, required String sellerId, String? driverId, required String customerName, required double length, required double salePrice, required double installation, required double glueGallons, required double glueAmount, required double ironPieces, required double ironAmount, required double driverFee, required String paymentMethod}) async {
+  Future<void> recordSale({required String institutionId, required String inventoryId, required String sellerId, String? driverId, required String customerName, required double length, required double salePrice, required double installation, String? glueSupplierId, required double glueGallons, required double glueAmount, String? ironSupplierId, required double ironPieces, required double ironAmount, required double driverFee, required String paymentMethod}) async {
     await client.rpc('record_sale', params: {
       'p_institution_id': institutionId,
       'p_inventory_id': inventoryId,
@@ -191,8 +191,10 @@ class FarshaRepository {
       'p_length': length,
       'p_sale_price': salePrice,
       'p_installation': installation,
+      'p_glue_supplier_id': glueSupplierId,
       'p_glue_gallons': glueGallons,
       'p_glue_amount': glueAmount,
+      'p_iron_supplier_id': ironSupplierId,
       'p_iron_pieces': ironPieces,
       'p_iron_amount': ironAmount,
       'p_driver_fee': driverFee,
@@ -218,5 +220,48 @@ class FarshaRepository {
 
   Future<void> addSellerLedger({required String institutionId, required String sellerId, required String kind, required double amount, String note = ''}) async {
     await client.from('seller_ledger').insert({'institution_id': institutionId, 'seller_id': sellerId, 'kind': kind, 'amount': amount, 'note': note, 'created_by': userId});
+  }
+
+  Future<InstitutionSettings> loadInstitutionSettings(String institutionId) async {
+    final row = await client.from('institutions').select('visa_fee_rate,tabby_fee_rate,tamara_fee_rate').eq('id', institutionId).single();
+    return InstitutionSettings.fromMap(row);
+  }
+
+  Future<void> updateInstitutionFees(String institutionId, double visa, double tabby, double tamara) async {
+    await client.from('institutions').update({
+      'visa_fee_rate': visa / 100,
+      'tabby_fee_rate': tabby / 100,
+      'tamara_fee_rate': tamara / 100,
+    }).eq('id', institutionId);
+  }
+
+  Future<void> updateSellerTerms({required String institutionId, required String sellerId, required String workPlan, required double commissionPercent, required double monthlySalary}) async {
+    await client.from('institution_memberships').update({
+      'work_plan': workPlan,
+      'commission_rate': commissionPercent / 100,
+      'monthly_salary': monthlySalary,
+    }).eq('institution_id', institutionId).eq('user_id', sellerId).eq('role', 'seller');
+  }
+
+  Future<List<InstitutionTrip>> loadInstitutionTrips(String institutionId) async {
+    final rows = await client.from('driver_trips').select('id,trip_date,amount,payment_status,payment_method,driver:driver_profiles!driver_trips_driver_id_fkey(profiles(full_name)),seller:profiles!driver_trips_seller_id_fkey(full_name)').eq('institution_id', institutionId).order('trip_date', ascending: false);
+    return (rows as List).map((row) {
+      final driverAccount = row['driver'] as Map<String, dynamic>?;
+      final driver = driverAccount?['profiles'] as Map<String, dynamic>?;
+      final seller = row['seller'] as Map<String, dynamic>?;
+      return InstitutionTrip(
+        id: row['id'] as String,
+        driverName: driver?['full_name'] as String? ?? 'سائق',
+        sellerName: seller?['full_name'] as String? ?? 'بائع',
+        date: DateTime.parse(row['trip_date'] as String),
+        amount: (row['amount'] as num).toDouble(),
+        isPaid: row['payment_status'] == 'paid',
+        paymentMethod: row['payment_method'] as String?,
+      );
+    }).toList();
+  }
+
+  Future<void> payDriverTrip(String tripId, String method) async {
+    await client.rpc('pay_driver_trip', params: {'p_trip_id': tripId, 'p_method': method});
   }
 }

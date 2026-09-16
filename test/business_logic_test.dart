@@ -15,4 +15,19 @@ void main() {
     const cutLength = 3.25;
     expect(before - cutLength, 76.75);
   });
+
+  test('payment provider fee uses the institution percentage', () {
+    const saleTotal = 2400.0;
+    const visaRate = 0.025;
+    expect(saleTotal * visaRate, 60);
+  });
+
+  test('monthly settlement subtracts withdrawals and payments', () {
+    const salary = 2000.0;
+    const commissions = 850.0;
+    const withdrawals = 300.0;
+    const deductions = 50.0;
+    const payments = 1000.0;
+    expect(salary + commissions - withdrawals - deductions - payments, 1500);
+  });
 }

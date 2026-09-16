@@ -250,6 +250,28 @@ class InstitutionOverview extends StatelessWidget {
   final InstitutionMembership membership;
   final FarshaRepository repository;
 
+  Future<void> _editFees(BuildContext context) async {
+    final settings = await repository.loadInstitutionSettings(membership.institutionId);
+    if (!context.mounted) return;
+    final visa = TextEditingController(text: settings.visaFeePercent.toStringAsFixed(2));
+    final tabby = TextEditingController(text: settings.tabbyFeePercent.toStringAsFixed(2));
+    final tamara = TextEditingController(text: settings.tamaraFeePercent.toStringAsFixed(2));
+    final save = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+      title: const Text('رسوم طرق الدفع'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: visa, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Visa %')),
+        const SizedBox(height: 10), TextField(controller: tabby, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Tabby %')),
+        const SizedBox(height: 10), TextField(controller: tamara, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Tamara %')),
+      ]),
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ'))],
+    ));
+    final values = [double.tryParse(visa.text) ?? -1, double.tryParse(tabby.text) ?? -1, double.tryParse(tamara.text) ?? -1];
+    visa.dispose(); tabby.dispose(); tamara.dispose();
+    if (save != true || values.any((value) => value < 0 || value > 100)) return;
+    await repository.updateInstitutionFees(membership.institutionId, values[0], values[1], values[2]);
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ نسب الرسوم')));
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<Map<String, int>>(
         future: repository.loadInstitutionCounts(membership.institutionId),
@@ -271,6 +293,10 @@ class InstitutionOverview extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 22),
+              if (membership.role != InstitutionRole.seller) ...[
+                OutlinedButton.icon(onPressed: () => _editFees(context), icon: const Icon(Icons.percent), label: const Text('رسوم Visa / Tabby / Tamara')),
+                const SizedBox(height: 12),
+              ],
               const Card(
                 child: Padding(
                   padding: EdgeInsets.all(16),
@@ -297,15 +323,21 @@ class _MembersPageState extends State<MembersPage> {
       widget.repository.loadMembers(widget.membership.institutionId);
   late Future<List<Map<String, dynamic>>> _drivers =
       widget.repository.loadConnectedDrivers(widget.membership.institutionId);
+  late Future<List<InstitutionTrip>> _trips =
+      widget.repository.loadInstitutionTrips(widget.membership.institutionId);
 
   void _reload() => setState(() {
         _members = widget.repository.loadMembers(widget.membership.institutionId);
         _drivers = widget.repository.loadConnectedDrivers(widget.membership.institutionId);
+        _trips = widget.repository.loadInstitutionTrips(widget.membership.institutionId);
       });
 
   Future<void> _invite() async {
     final phone = TextEditingController(text: '+966');
+    final commission = TextEditingController(text: '50');
+    final salary = TextEditingController(text: '0');
     InstitutionRole role = InstitutionRole.seller;
+    String workPlan = 'commission';
     final code = await showDialog<String>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -322,6 +354,23 @@ class _MembersPageState extends State<MembersPage> {
                   .toList(),
               onChanged: (value) => setDialogState(() => role = value!),
             ),
+            if (role == InstitutionRole.seller) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: workPlan,
+                decoration: const InputDecoration(labelText: 'نظام العمل'),
+                items: const [
+                  DropdownMenuItem(value: 'commission', child: Text('عمولة فقط')),
+                  DropdownMenuItem(value: 'salary', child: Text('راتب فقط')),
+                  DropdownMenuItem(value: 'salary_and_commission', child: Text('راتب + عمولة')),
+                ],
+                onChanged: (value) => setDialogState(() => workPlan = value!),
+              ),
+              const SizedBox(height: 12),
+              TextField(controller: commission, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'نسبة العمولة %')),
+              const SizedBox(height: 12),
+              TextField(controller: salary, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الراتب الشهري')),
+            ],
           ]),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
@@ -332,6 +381,9 @@ class _MembersPageState extends State<MembersPage> {
                     institutionId: widget.membership.institutionId,
                     phone: phone.text.trim(),
                     role: role,
+                    workPlan: role == InstitutionRole.seller ? workPlan : 'salary',
+                    commissionRate: role == InstitutionRole.seller ? (double.tryParse(commission.text) ?? 50) / 100 : 0,
+                    monthlySalary: role == InstitutionRole.seller ? (double.tryParse(salary.text) ?? 0) : 0,
                   );
                   if (dialogContext.mounted) Navigator.pop(dialogContext, inviteCode);
                 } catch (error) {
@@ -347,6 +399,8 @@ class _MembersPageState extends State<MembersPage> {
       ),
     );
     phone.dispose();
+    commission.dispose();
+    salary.dispose();
     if (code != null && mounted) {
       await showDialog<void>(
         context: context,
@@ -358,6 +412,39 @@ class _MembersPageState extends State<MembersPage> {
       );
       _reload();
     }
+  }
+
+  Future<void> _editSeller(Map<String, dynamic> member) async {
+    if (widget.membership.role != InstitutionRole.owner || member['role'] != 'seller') return;
+    var plan = member['work_plan'] as String;
+    final commission = TextEditingController(text: ((member['commission_rate'] as num).toDouble() * 100).toStringAsFixed(2));
+    final salary = TextEditingController(text: (member['monthly_salary'] as num).toStringAsFixed(2));
+    final save = await showDialog<bool>(context: context, builder: (context) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
+      title: const Text('حساب البائع'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        DropdownButtonFormField<String>(initialValue: plan, decoration: const InputDecoration(labelText: 'نظام العمل'), items: const [DropdownMenuItem(value: 'commission', child: Text('عمولة فقط')), DropdownMenuItem(value: 'salary', child: Text('راتب فقط')), DropdownMenuItem(value: 'salary_and_commission', child: Text('راتب + عمولة'))], onChanged: (value) => setDialogState(() => plan = value!)),
+        const SizedBox(height: 10), TextField(controller: commission, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'نسبة العمولة %')),
+        const SizedBox(height: 10), TextField(controller: salary, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الراتب الشهري')),
+      ]),
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ'))],
+    )));
+    final rate = double.tryParse(commission.text) ?? -1; final monthly = double.tryParse(salary.text) ?? -1;
+    commission.dispose(); salary.dispose();
+    if (save != true || rate < 0 || rate > 100 || monthly < 0) return;
+    await widget.repository.updateSellerTerms(institutionId: widget.membership.institutionId, sellerId: member['user_id'] as String, workPlan: plan, commissionPercent: rate, monthlySalary: monthly);
+    _reload();
+  }
+
+  Future<void> _payTrip(InstitutionTrip trip) async {
+    var method = 'cash';
+    final save = await showDialog<bool>(context: context, builder: (context) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
+      title: Text('دفع مشوار ${trip.driverName}'),
+      content: DropdownButtonFormField<String>(initialValue: method, decoration: const InputDecoration(labelText: 'طريقة الدفع'), items: const [DropdownMenuItem(value: 'cash', child: Text('كاش')), DropdownMenuItem(value: 'bank_transfer', child: Text('تحويل بنكي'))], onChanged: (value) => setDialogState(() => method = value!)),
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('تأكيد الدفع'))],
+    )));
+    if (save != true) return;
+    await widget.repository.payDriverTrip(trip.id, method);
+    _reload();
   }
 
   Future<void> _connectDriver() async {
@@ -403,15 +490,20 @@ class _MembersPageState extends State<MembersPage> {
                 final role = InstitutionRoleLabel.parse(member['role'] as String);
                 return Card(
                   child: ListTile(
+                    onTap: () => _editSeller(member),
                     leading: const CircleAvatar(child: Icon(Icons.person)),
                     title: Text(profile['full_name'] as String),
-                    subtitle: Text('${role.label} • ${profile['phone']}'),
+                    subtitle: Text(role == InstitutionRole.seller
+                        ? '${role.label} • ${profile['phone']}\n${_workPlanLabel(member['work_plan'] as String)} • عمولة ${((member['commission_rate'] as num).toDouble() * 100).toStringAsFixed(1)}% • راتب ${(member['monthly_salary'] as num).toStringAsFixed(2)}'
+                        : '${role.label} • ${profile['phone']}'),
                   ),
                 );
               }).toList();
             return FutureBuilder<List<Map<String, dynamic>>>(
               future: _drivers,
-              builder: (context, driverSnapshot) => ListView(
+              builder: (context, driverSnapshot) => FutureBuilder<List<InstitutionTrip>>(
+              future: _trips,
+              builder: (context, tripSnapshot) => ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   const Text('فريق المؤسسة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -435,7 +527,21 @@ class _MembersPageState extends State<MembersPage> {
                             subtitle: Text('${driver['phone']} • ${driver['is_available'] == true ? 'متاح' : 'غير متاح'}'),
                           ),
                         )),
+                  const SizedBox(height: 18),
+                  const Text('حسابات المشاوير', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  if (tripSnapshot.connectionState == ConnectionState.waiting)
+                    const Center(child: CircularProgressIndicator())
+                  else if (tripSnapshot.data?.isEmpty ?? true)
+                    const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('لا توجد مشاوير مسجلة.')))
+                  else
+                    ...tripSnapshot.data!.map((trip) => Card(child: ListTile(
+                      leading: Icon(trip.isPaid ? Icons.check_circle : Icons.payments_outlined, color: trip.isPaid ? Colors.green : null),
+                      title: Text('${trip.driverName} • ${trip.amount.toStringAsFixed(2)} ر.س'),
+                      subtitle: Text('${trip.sellerName} • ${trip.date.toLocal().toString().split(' ').first}\n${trip.isPaid ? (trip.paymentMethod == 'cash' ? 'مدفوع كاش' : 'مدفوع تحويل بنكي') : 'غير مدفوع'}'),
+                      trailing: trip.isPaid ? null : TextButton(onPressed: () => _payTrip(trip), child: const Text('دفع')),
+                    ))),
                 ],
+              ),
               ),
             );
           },
@@ -446,6 +552,12 @@ class _MembersPageState extends State<MembersPage> {
           label: const Text('دعوة'),
         ),
       );
+
+  String _workPlanLabel(String value) => switch (value) {
+        'salary' => 'راتب فقط',
+        'salary_and_commission' => 'راتب + عمولة',
+        _ => 'عمولة فقط',
+      };
 }
 
 class DriverHome extends StatefulWidget {
@@ -471,8 +583,10 @@ class _DriverHomeState extends State<DriverHome> {
             final trips = snapshot.data!;
             if (trips.isEmpty) return const Center(child: Text('لا توجد مشاوير مسجلة حتى الآن.'));
             final totals = <String, double>{};
+            final pending = <String, double>{};
             for (final trip in trips) {
               totals.update(trip.institutionName, (value) => value + trip.amount, ifAbsent: () => trip.amount);
+              if (trip.paymentStatus != 'paid') pending.update(trip.institutionName, (value) => value + trip.amount, ifAbsent: () => trip.amount);
             }
             return ListView(
               padding: const EdgeInsets.all(16),
@@ -483,7 +597,8 @@ class _DriverHomeState extends State<DriverHome> {
                       child: ListTile(
                         leading: const Icon(Icons.storefront),
                         title: Text(entry.key),
-                        trailing: Text('${entry.value.toStringAsFixed(2)} ر.س'),
+                        subtitle: Text('المتبقي ${(pending[entry.key] ?? 0).toStringAsFixed(2)} ر.س'),
+                        trailing: Text('الإجمالي\n${entry.value.toStringAsFixed(2)} ر.س', textAlign: TextAlign.center),
                       ),
                     )),
                 const Divider(height: 30),

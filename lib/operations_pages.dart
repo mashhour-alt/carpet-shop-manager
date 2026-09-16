@@ -119,13 +119,14 @@ class SalesSettlementPage extends StatefulWidget {
 }
 
 class _SalesSettlementPageState extends State<SalesSettlementPage> {
+  late Future<List<SupplierRecord>> _suppliers = widget.repository.loadSuppliers(widget.membership.institutionId);
   late Future<List<InventoryRecord>> _inventory = widget.repository.loadInventory(widget.membership.institutionId);
   late Future<List<PersonOption>> _sellers = widget.repository.loadSellers(widget.membership.institutionId);
   late Future<List<PersonOption>> _drivers = widget.repository.loadDriverOptions(widget.membership.institutionId);
   final _customer = TextEditingController(); final _length = TextEditingController(); final _price = TextEditingController();
   final _installation = TextEditingController(text: '0'); final _glueQty = TextEditingController(text: '0'); final _glueAmount = TextEditingController(text: '0');
   final _ironQty = TextEditingController(text: '0'); final _ironAmount = TextEditingController(text: '0'); final _driverFee = TextEditingController(text: '0');
-  String? _inventoryId; String? _sellerId; String? _driverId; String _payment = 'cash'; bool _busy = false;
+  String? _inventoryId; String? _sellerId; String? _driverId; String? _glueSupplierId; String? _ironSupplierId; String _payment = 'cash'; bool _busy = false;
 
   @override void dispose() { for (final c in [_customer,_length,_price,_installation,_glueQty,_glueAmount,_ironQty,_ironAmount,_driverFee]) { c.dispose(); } super.dispose(); }
 
@@ -136,9 +137,11 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
       if (candidate.id == _inventoryId) item = candidate;
     }
     if (item == null || seller == null || _number(_length) <= 0 || _number(_length) > item.remainingLength || _number(_price) < 0) return _message('راجع القطعة والطول والسعر');
+    if (_number(_glueQty) > 0 && _glueSupplierId == null) return _message('اختر مورد الغراء');
+    if (_number(_ironQty) > 0 && _ironSupplierId == null) return _message('اختر مورد الحديد');
     setState(() => _busy = true);
     try {
-      await widget.repository.recordSale(institutionId: widget.membership.institutionId, inventoryId: item.id, sellerId: seller, driverId: _driverId, customerName: _customer.text, length: _number(_length), salePrice: _number(_price), installation: _number(_installation), glueGallons: _number(_glueQty), glueAmount: _number(_glueAmount), ironPieces: _number(_ironQty), ironAmount: _number(_ironAmount), driverFee: _number(_driverFee), paymentMethod: _payment);
+      await widget.repository.recordSale(institutionId: widget.membership.institutionId, inventoryId: item.id, sellerId: seller, driverId: _driverId, customerName: _customer.text, length: _number(_length), salePrice: _number(_price), installation: _number(_installation), glueSupplierId: _glueSupplierId, glueGallons: _number(_glueQty), glueAmount: _number(_glueAmount), ironSupplierId: _ironSupplierId, ironPieces: _number(_ironQty), ironAmount: _number(_ironAmount), driverFee: _number(_driverFee), paymentMethod: _payment);
       _message('تم حفظ البيع وخصم الطول من المخزون');
       setState(() { _inventory = widget.repository.loadInventory(widget.membership.institutionId); _length.clear(); _price.clear(); });
     } catch (error) { _message('$error'); } finally { if (mounted) setState(() => _busy = false); }
@@ -147,9 +150,9 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
   void _message(String text) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<InventoryRecord>>(future: _inventory, builder: (context, invSnap) => FutureBuilder<List<PersonOption>>(future: _sellers, builder: (context, sellerSnap) => FutureBuilder<List<PersonOption>>(future: _drivers, builder: (context, driverSnap) {
-    if (!invSnap.hasData || !sellerSnap.hasData || !driverSnap.hasData) return const Center(child: CircularProgressIndicator());
-    final inventory = invSnap.data!; final sellers = sellerSnap.data!; final drivers = driverSnap.data!;
+  Widget build(BuildContext context) => FutureBuilder<List<SupplierRecord>>(future: _suppliers, builder: (context, supplierSnap) => FutureBuilder<List<InventoryRecord>>(future: _inventory, builder: (context, invSnap) => FutureBuilder<List<PersonOption>>(future: _sellers, builder: (context, sellerSnap) => FutureBuilder<List<PersonOption>>(future: _drivers, builder: (context, driverSnap) {
+    if (!supplierSnap.hasData || !invSnap.hasData || !sellerSnap.hasData || !driverSnap.hasData) return const Center(child: CircularProgressIndicator());
+    final suppliers = supplierSnap.data!; final inventory = invSnap.data!; final sellers = sellerSnap.data!; final drivers = driverSnap.data!;
     if (widget.membership.role == InstitutionRole.accountant) {
       return ListView(
         padding: const EdgeInsets.all(16),
@@ -168,7 +171,9 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
       const SizedBox(height: 10), Row(children: [Expanded(child: TextField(controller: _length, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الطول م'))), const SizedBox(width: 8), Expanded(child: TextField(controller: _price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'سعر البيع/م²')))]),
       const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('العرض ثابت 4 م والمساحة = الطول × 4')),
       Row(children: [Expanded(child: TextField(controller: _installation, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'التركيب'))), const SizedBox(width: 8), Expanded(child: TextField(controller: _glueQty, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'جالون غراء')))]),
+      const SizedBox(height: 10), DropdownButtonFormField<String>(initialValue: _glueSupplierId, decoration: const InputDecoration(labelText: 'مورد الغراء'), items: suppliers.map((supplier) => DropdownMenuItem(value: supplier.id, child: Text(supplier.name))).toList(), onChanged: (value) => setState(() => _glueSupplierId = value)),
       const SizedBox(height: 10), Row(children: [Expanded(child: TextField(controller: _glueAmount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'قيمة الغراء'))), const SizedBox(width: 8), Expanded(child: TextField(controller: _ironQty, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'قطع حديد')))]),
+      const SizedBox(height: 10), DropdownButtonFormField<String>(initialValue: _ironSupplierId, decoration: const InputDecoration(labelText: 'مورد الحديد'), items: suppliers.map((supplier) => DropdownMenuItem(value: supplier.id, child: Text(supplier.name))).toList(), onChanged: (value) => setState(() => _ironSupplierId = value)),
       const SizedBox(height: 10), TextField(controller: _ironAmount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'قيمة الحديد')),
       const SizedBox(height: 10), DropdownButtonFormField<String?>(initialValue: _driverId, decoration: const InputDecoration(labelText: 'السائق (اختياري)'), items: [const DropdownMenuItem<String?>(value: null, child: Text('بدون سائق')), ...drivers.map((d) => DropdownMenuItem<String?>(value: d.id, child: Text(d.name)))], onChanged: (v) => setState(() => _driverId = v)),
       const SizedBox(height: 10), TextField(controller: _driverFee, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'حساب المشوار')),
@@ -176,7 +181,7 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
       const SizedBox(height: 16), FilledButton(onPressed: _busy ? null : () => _save(inventory), child: Text(_busy ? 'جاري الحفظ...' : 'حفظ البيع وخصم المخزون')),
       const SizedBox(height: 24), SettlementPanel(membership: widget.membership, repository: widget.repository, sellers: sellers),
     ]);
-  })));
+  }))));
 }
 
 class SettlementPanel extends StatefulWidget {

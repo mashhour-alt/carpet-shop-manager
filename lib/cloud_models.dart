@@ -152,3 +152,27 @@ class SettlementSummary {
   final double payments;
   double get net => salary + commission - withdrawals - expenses - deductions - payments;
 }
+
+class InstitutionSettings {
+  const InstitutionSettings({required this.visaFeePercent, required this.tabbyFeePercent, required this.tamaraFeePercent});
+  final double visaFeePercent;
+  final double tabbyFeePercent;
+  final double tamaraFeePercent;
+
+  factory InstitutionSettings.fromMap(Map<String, dynamic> map) => InstitutionSettings(
+        visaFeePercent: (map['visa_fee_rate'] as num).toDouble() * 100,
+        tabbyFeePercent: (map['tabby_fee_rate'] as num).toDouble() * 100,
+        tamaraFeePercent: (map['tamara_fee_rate'] as num).toDouble() * 100,
+      );
+}
+
+class InstitutionTrip {
+  const InstitutionTrip({required this.id, required this.driverName, required this.sellerName, required this.date, required this.amount, required this.isPaid, this.paymentMethod});
+  final String id;
+  final String driverName;
+  final String sellerName;
+  final DateTime date;
+  final double amount;
+  final bool isPaid;
+  final String? paymentMethod;
+}
