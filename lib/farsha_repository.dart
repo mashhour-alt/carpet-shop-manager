@@ -132,4 +132,91 @@ class FarshaRepository {
         .map((row) => DriverTrip.fromMap(row as Map<String, dynamic>))
         .toList();
   }
+
+  Future<List<SupplierRecord>> loadSuppliers(String institutionId) async {
+    final rows = await client.from('suppliers').select().eq('institution_id', institutionId).order('name');
+    return (rows as List).map((row) => SupplierRecord.fromMap(row as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> addSupplier(String institutionId, String name, String phone) async {
+    await client.from('suppliers').insert({'institution_id': institutionId, 'name': name.trim(), 'phone': phone.trim()});
+  }
+
+  Future<void> paySupplier(String institutionId, String supplierId, double amount) async {
+    await client.rpc('record_supplier_payment', params: {
+      'p_institution_id': institutionId,
+      'p_supplier_id': supplierId,
+      'p_amount': amount,
+    });
+  }
+
+  Future<List<InventoryRecord>> loadInventory(String institutionId) async {
+    final rows = await client.from('inventory_items').select().eq('institution_id', institutionId).order('name');
+    return (rows as List).map((row) => InventoryRecord.fromMap(row as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> addInventory({required String institutionId, required String supplierId, required String name, required String color, required double length, required double supplierPrice, required double wholesalePrice, required double lowStockAt}) async {
+    await client.rpc('create_inventory_item', params: {
+      'p_institution_id': institutionId,
+      'p_supplier_id': supplierId,
+      'p_name': name.trim(),
+      'p_color': color.trim(),
+      'p_length': length,
+      'p_supplier_price': supplierPrice,
+      'p_wholesale_price': wholesalePrice,
+      'p_low_stock_at': lowStockAt,
+    });
+  }
+
+  Future<List<PersonOption>> loadSellers(String institutionId) async {
+    final rows = await client.from('institution_memberships').select('user_id,profiles(full_name,phone)').eq('institution_id', institutionId).eq('role', 'seller').eq('status', 'active');
+    return (rows as List).map((row) {
+      final profile = row['profiles'] as Map<String, dynamic>;
+      return PersonOption(id: row['user_id'] as String, name: profile['full_name'] as String, phone: profile['phone'] as String);
+    }).toList();
+  }
+
+  Future<List<PersonOption>> loadDriverOptions(String institutionId) async {
+    final rows = await loadConnectedDrivers(institutionId);
+    return rows.where((row) => row['connection_status'] == 'active' && row['is_available'] == true).map((row) => PersonOption(id: row['driver_id'] as String, name: row['full_name'] as String, phone: row['phone'] as String)).toList();
+  }
+
+  Future<void> recordSale({required String institutionId, required String inventoryId, required String sellerId, String? driverId, required String customerName, required double length, required double salePrice, required double installation, required double glueGallons, required double glueAmount, required double ironPieces, required double ironAmount, required double driverFee, required String paymentMethod}) async {
+    await client.rpc('record_sale', params: {
+      'p_institution_id': institutionId,
+      'p_inventory_id': inventoryId,
+      'p_seller_id': sellerId,
+      'p_driver_id': driverId,
+      'p_customer_name': customerName.trim(),
+      'p_length': length,
+      'p_sale_price': salePrice,
+      'p_installation': installation,
+      'p_glue_gallons': glueGallons,
+      'p_glue_amount': glueAmount,
+      'p_iron_pieces': ironPieces,
+      'p_iron_amount': ironAmount,
+      'p_driver_fee': driverFee,
+      'p_customer_payment': paymentMethod,
+    });
+  }
+
+  Future<SettlementSummary> loadSettlement(String institutionId, String sellerId, DateTime month) async {
+    final start = DateTime(month.year, month.month, 1);
+    final end = DateTime(month.year, month.month + 1, 1);
+    final membership = await client.from('institution_memberships').select('work_plan,monthly_salary').eq('institution_id', institutionId).eq('user_id', sellerId).single();
+    final sales = await client.from('sales').select('seller_commission').eq('institution_id', institutionId).eq('seller_id', sellerId).gte('created_at', start.toIso8601String()).lt('created_at', end.toIso8601String());
+    final ledger = await client.from('seller_ledger').select('kind,amount').eq('institution_id', institutionId).eq('seller_id', sellerId).gte('entry_date', start.toIso8601String().split('T').first).lt('entry_date', end.toIso8601String().split('T').first);
+    final commission = (sales as List).fold<double>(0, (sum, row) => sum + (row['seller_commission'] as num).toDouble());
+    final totals = <String, double>{};
+    for (final row in ledger as List) {
+      totals.update(row['kind'] as String, (value) => value + (row['amount'] as num).toDouble(), ifAbsent: () => (row['amount'] as num).toDouble());
+    }
+    final plan = membership['work_plan'] as String;
+    final salary = plan == 'salary' || plan == 'salary_and_commission' ? (membership['monthly_salary'] as num).toDouble() : 0.0;
+    return SettlementSummary(salary: salary, commission: plan == 'salary' ? 0 : commission, withdrawals: totals['withdrawal'] ?? 0, expenses: totals['expense'] ?? 0, deductions: totals['deduction'] ?? 0, payments: totals['payment'] ?? 0);
+  }
+
+  Future<void> addSellerLedger({required String institutionId, required String sellerId, required String kind, required double amount, String note = ''}) async {
+    await client.from('seller_ledger').insert({'institution_id': institutionId, 'seller_id': sellerId, 'kind': kind, 'amount': amount, 'note': note, 'created_by': userId});
+  }
 }

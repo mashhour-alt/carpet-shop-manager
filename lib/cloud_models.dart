@@ -96,3 +96,59 @@ class DriverTrip {
     );
   }
 }
+
+class SupplierRecord {
+  const SupplierRecord({required this.id, required this.name, required this.phone, required this.purchases, required this.paid});
+  final String id;
+  final String name;
+  final String phone;
+  final double purchases;
+  final double paid;
+  double get remaining => purchases - paid;
+
+  factory SupplierRecord.fromMap(Map<String, dynamic> map) => SupplierRecord(
+        id: map['id'] as String,
+        name: map['name'] as String,
+        phone: map['phone'] as String,
+        purchases: (map['purchases_total'] as num).toDouble(),
+        paid: (map['paid_total'] as num).toDouble(),
+      );
+}
+
+class InventoryRecord {
+  const InventoryRecord({required this.id, required this.name, required this.color, required this.remainingLength, required this.wholesalePrice, required this.lowStockAt});
+  final String id;
+  final String name;
+  final String color;
+  final double remainingLength;
+  final double wholesalePrice;
+  final double lowStockAt;
+  bool get isLow => remainingLength <= lowStockAt;
+
+  factory InventoryRecord.fromMap(Map<String, dynamic> map) => InventoryRecord(
+        id: map['id'] as String,
+        name: map['name'] as String,
+        color: map['color'] as String,
+        remainingLength: (map['remaining_length'] as num).toDouble(),
+        wholesalePrice: (map['wholesale_price'] as num).toDouble(),
+        lowStockAt: (map['low_stock_at'] as num).toDouble(),
+      );
+}
+
+class PersonOption {
+  const PersonOption({required this.id, required this.name, this.phone = ''});
+  final String id;
+  final String name;
+  final String phone;
+}
+
+class SettlementSummary {
+  const SettlementSummary({required this.salary, required this.commission, required this.withdrawals, required this.expenses, required this.deductions, required this.payments});
+  final double salary;
+  final double commission;
+  final double withdrawals;
+  final double expenses;
+  final double deductions;
+  final double payments;
+  double get net => salary + commission - withdrawals - expenses - deductions - payments;
+}

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cloud_models.dart';
 import 'farsha_repository.dart';
+import 'operations_pages.dart';
 
 class ProfileRouter extends StatefulWidget {
   const ProfileRouter({super.key});
@@ -216,8 +217,8 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
     final pages = <Widget>[
       InstitutionOverview(membership: widget.membership, repository: widget.repository),
       if (manager) MembersPage(membership: widget.membership, repository: widget.repository),
-      const Center(child: Text('الموردون والمخزون — المرحلة التالية')),
-      const Center(child: Text('البيع والتصفية — بعد ربط المخزون')),
+      InstitutionOperationsPage(membership: widget.membership, repository: widget.repository),
+      SalesSettlementPage(membership: widget.membership, repository: widget.repository),
     ];
     final labels = <String>['الرئيسية', if (manager) 'المستخدمون', 'المخزون', 'البيع'];
     return Scaffold(
