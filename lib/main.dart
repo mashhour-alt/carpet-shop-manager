@@ -20,8 +20,44 @@ class _StartGateState extends State<StartGate> {
   @override Widget build(BuildContext context)=>FutureBuilder<List<Institution>>(future:_institutions,builder:(context,s){ if(!s.hasData)return const Scaffold(body:Center(child:CircularProgressIndicator())); if(s.data!.isEmpty)return const InstitutionForm(); return InstitutionPicker(institutions:s.data!);});
 }
 
-class InstitutionPicker extends StatelessWidget { const InstitutionPicker({super.key,required this.institutions}); final List<Institution> institutions;
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('مؤسسة / سائق')),body:ListView(padding:const EdgeInsets.all(20),children:[const Text('اختر المؤسسة للدخول',style:TextStyle(fontSize:24,fontWeight:FontWeight.bold)),const SizedBox(height:16),...institutions.map((i)=>Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.storefront)),title:Text(i.name),subtitle:Text(i.phone),trailing:const Icon(Icons.chevron_left),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>UserPicker(institution:i))))),const SizedBox(height:12),OutlinedButton.icon(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const InstitutionForm())),icon:const Icon(Icons.add_business),label:const Text('إنشاء مؤسسة جديدة'))]));
+class InstitutionPicker extends StatelessWidget {
+  const InstitutionPicker({super.key, required this.institutions});
+  final List<Institution> institutions;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('مؤسسة / سائق')),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            const Text('اختر المؤسسة للدخول', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            ...institutions.map(
+              (i) => Card(
+                child: ListTile(
+                  leading: const CircleAvatar(child: Icon(Icons.storefront)),
+                  title: Text(i.name),
+                  subtitle: Text(i.phone),
+                  trailing: const Icon(Icons.chevron_left),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => UserPicker(institution: i)),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const InstitutionForm()),
+              ),
+              icon: const Icon(Icons.add_business),
+              label: const Text('إنشاء مؤسسة جديدة'),
+            ),
+          ],
+        ),
+      );
 }
 
 class InstitutionForm extends StatefulWidget { const InstitutionForm({super.key}); @override State<InstitutionForm> createState()=>_InstitutionFormState(); }
@@ -39,11 +75,78 @@ class _UserSetupState extends State<UserSetup>{ List<AppUser> users=[]; @overrid
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(widget.institutionName)),body:ListView(padding:const EdgeInsets.all(18),children:[const Text('المستخدمون',style:TextStyle(fontSize:23,fontWeight:FontWeight.bold)),const Text('أضف صاحب المؤسسة ثم المحاسب والبائعين والسائقين. السائق يمكن إضافته في كل مؤسسة بنفس رقم الجوال.'),const SizedBox(height:12),if(users.isEmpty)const InfoCard('لم تُضف أي مستخدم بعد.'),...users.map((u)=>Card(child:ListTile(leading:CircleAvatar(child:Icon(roleIcon(u.role))),title:Text(u.name),subtitle:Text('${u.role.title} • ${u.phone}')))),const SizedBox(height:12),OutlinedButton.icon(onPressed:add,icon:const Icon(Icons.person_add),label:const Text('إضافة مستخدم')),if(users.isNotEmpty)...[const SizedBox(height:12),FilledButton(onPressed:()=>Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>UserPicker(institution:Institution(id:widget.institutionId,name:widget.institutionName,commercialRegistration:'',taxNumber:'',address:'',phone:'',email:''))),(_)=>false),child:const Text('متابعة إلى المؤسسة'))]]));}
 }
 
-class UserPicker extends StatefulWidget{const UserPicker({super.key,required this.institution});final Institution institution;@override State<UserPicker>createState()=>_UserPickerState();}
-class _UserPickerState extends State<UserPicker>{late Future<List<AppUser>> users;@override void initState(){super.initState();users=ShopDatabase.instance.users(widget.institution.id!);}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:Text(widget.institution.name)),body:FutureBuilder<List<AppUser>>(future:users,builder:(c,s){if(!s.hasData)return const Center(child:CircularProgressIndicator());if(s.data!.isEmpty)return UserSetup(institutionId:widget.institution.id!,institutionName:widget.institution.name);return ListView(padding:const EdgeInsets.all(18),children:[const Text('الدخول كمستخدم',style:TextStyle(fontSize:23,fontWeight:FontWeight.bold)),const Text('واجهة المؤسسة تتغير حسب الصلاحية.'),const SizedBox(height:12),...s.data!.map((u)=>Card(child:ListTile(leading:CircleAvatar(child:Icon(roleIcon(u.role))),title:Text(u.name),subtitle:Text(u.role.title),trailing:const Icon(Icons.arrow_back_ios_new),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>AppHome(institution:widget.institution,user:u))))),OutlinedButton.icon(onPressed:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>UserSetup(institutionId:widget.institution.id!,institutionName:widget.institution.name))),icon:const Icon(Icons.manage_accounts),label:const Text('إدارة المستخدمين'))]);}));}
+class UserPicker extends StatefulWidget {
+  const UserPicker({super.key, required this.institution});
+  final Institution institution;
+  @override
+  State<UserPicker> createState() => _UserPickerState();
+}
+
+class _UserPickerState extends State<UserPicker> {
+  late Future<List<AppUser>> users;
+
+  @override
+  void initState() {
+    super.initState();
+    users = ShopDatabase.instance.users(widget.institution.id!);
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: Text(widget.institution.name)),
+        body: FutureBuilder<List<AppUser>>(
+          future: users,
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            if (snapshot.data!.isEmpty) {
+              return UserSetup(
+                institutionId: widget.institution.id!,
+                institutionName: widget.institution.name,
+              );
+            }
+            return ListView(
+              padding: const EdgeInsets.all(18),
+              children: [
+                const Text('الدخول كمستخدم', style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold)),
+                const Text('واجهة المؤسسة تتغير حسب الصلاحية.'),
+                const SizedBox(height: 12),
+                ...snapshot.data!.map(
+                  (u) => Card(
+                    child: ListTile(
+                      leading: CircleAvatar(child: Icon(roleIcon(u.role))),
+                      title: Text(u.name),
+                      subtitle: Text(u.role.title),
+                      trailing: const Icon(Icons.arrow_back_ios_new),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => AppHome(institution: widget.institution, user: u)),
+                      ),
+                    ),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => UserSetup(
+                        institutionId: widget.institution.id!,
+                        institutionName: widget.institution.name,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.manage_accounts),
+                  label: const Text('إدارة المستخدمين'),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+}
 
 class UserForm extends StatefulWidget{const UserForm({super.key,required this.institutionId});final int institutionId;@override State<UserForm>createState()=>_UserFormState();}
 class _UserFormState extends State<UserForm>{final form=GlobalKey<FormState>();final n=TextEditingController(),p=TextEditingController(),salary=TextEditingController(text:'0'),commission=TextEditingController(text:'50');UserRole role=UserRole.seller;WorkPlan plan=WorkPlan.commission;double d(TextEditingController c)=>double.tryParse(c.text)??0;Future<void>save()async{if(!form.currentState!.validate())return;await ShopDatabase.instance.addUser(AppUser(institutionId:widget.institutionId,name:n.text.trim(),phone:p.text.trim(),role:role,workPlan:role==UserRole.seller?plan:WorkPlan.commission,salary:d(salary),commissionRate:d(commission)/100));if(mounted)Navigator.pop(context);}@override void dispose(){n.dispose();p.dispose();salary.dispose();commission.dispose();super.dispose();}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('إضافة مستخدم')),body:Form(key:form,child:ListView(padding:const EdgeInsets.all(18),children:[TextFormField(controller:n,decoration:const InputDecoration(labelText:'الاسم'),validator:requiredText),gap,TextFormField(controller:p,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'رقم الجوال'),validator:requiredText),gap,DropdownButtonFormField<UserRole>(value:role,decoration:const InputDecoration(labelText:'الصلاحية'),items:UserRole.values.map((x)=>DropdownMenuItem(value:x,child:Text(x.title))).toList(),onChanged:(x)=>setState(()=>role=x!)),if(role==UserRole.seller)...[gap,DropdownButtonFormField<WorkPlan>(value:plan,decoration:const InputDecoration(labelText:'نظام العمل'),items:WorkPlan.values.map((x)=>DropdownMenuItem(value:x,child:Text(x.title))).toList(),onChanged:(x)=>setState(()=>plan=x!)),gap,numberField(commission,'نسبة العمولة %'),if(plan!=WorkPlan.commission)...[gap,numberField(salary,'الراتب الشهري')]],const SizedBox(height:20),FilledButton(onPressed:save,child:const Text('حفظ'))])));}
+}
 
 class AppHome extends StatefulWidget{const AppHome({super.key,required this.institution,required this.user});final Institution institution;final AppUser user;@override State<AppHome>createState()=>_AppHomeState();}
 class _AppHomeState extends State<AppHome>{int index=0;@override Widget build(BuildContext c){final pages=widget.user.role==UserRole.driver?[DriverPage(inst:widget.institution,user:widget.user),ProfilePage(inst:widget.institution,user:widget.user)]:[OverviewPage(inst:widget.institution,user:widget.user),SalePage(inst:widget.institution,user:widget.user),InventoryPage(inst:widget.institution,user:widget.user),SettlementPage(inst:widget.institution,user:widget.user),SettingsPage(inst:widget.institution,user:widget.user)];final labels=widget.user.role==UserRole.driver?['المشاوير','الحساب']:['الرئيسية','بيع','المخزون','التصفية','الإدارة'];return Scaffold(appBar:AppBar(title:Text(widget.institution.name),actions:[IconButton(onPressed:()=>Navigator.pop(c),icon:const Icon(Icons.switch_account))]),body:pages[index],bottomNavigationBar:NavigationBar(selectedIndex:index,onDestinationSelected:(v)=>setState(()=>index=v),destinations:labels.map((x)=>NavigationDestination(icon:Icon(navIcon(x)),label:x)).toList()));}}
@@ -62,17 +165,111 @@ class SalePage extends StatefulWidget{const SalePage({super.key,required this.in
 class _SalePageState extends State<SalePage>{InventoryItem? item;AppUser? seller,driver;String customerPay='كاش',driverPay='كاش';final customer=TextEditingController(),length=TextEditingController(),price=TextEditingController(),installation=TextEditingController(text:'0'),glueGallons=TextEditingController(text:'0'),glueCost=TextEditingController(text:'0'),ironPieces=TextEditingController(text:'0'),ironCost=TextEditingController(text:'0'),driverFee=TextEditingController(text:'0');double get l=>d(length);double get area=>l*(item?.width??4);double get total=>area*d(price)+d(installation)+d(glueCost)+d(ironCost)+d(driverFee);double fee()=>total*switch(customerPay){'Visa'=>widget.inst.visaFee,'Tabby'=>widget.inst.tabbyFee,'Tamara'=>widget.inst.tamaraFee,_=>0};Future<void>save()async{if(item==null||seller==null||l<=0||d(price)<=0){note(context,'أكمل القطعة والبائع والطول وسعر البيع');return;}if(l>item!.length){note(context,'الطول غير متاح في المخزون');return;}await ShopDatabase.instance.addSale(Sale(institutionId:widget.inst.id!,inventoryId:item!.id!,sellerId:seller!.id!,driverId:driver?.id,customerName:customer.text.trim(),length:l,width:item!.width,salePrice:d(price),installation:d(installation),glueGallons:d(glueGallons),glueCost:d(glueCost),ironPieces:d(ironPieces),ironCost:d(ironCost),driverFee:d(driverFee),customerPayment:customerPay,driverPayment:driverPay,paymentFee:fee(),createdAt:DateTime.now()));if(!mounted)return;note(context,'تم الحفظ وخصم ${l.toStringAsFixed(2)} متر من المخزون');Navigator.pop(context);}@override Widget build(BuildContext c){if(widget.user.role==UserRole.accountant)return const Center(child:Text('المحاسب يحدد الأسعار ويراجع التسويات؛ البيع للبائع وصاحب المؤسسة.'));return FutureBuilder<List<dynamic>>(future:Future.wait([ShopDatabase.instance.inventory(widget.inst.id!),ShopDatabase.instance.users(widget.inst.id!,role:UserRole.seller),ShopDatabase.instance.users(widget.inst.id!,role:UserRole.driver)]),builder:(c,s){if(!s.hasData)return const Center(child:CircularProgressIndicator());final inv=s.data![0]as List<InventoryItem>, sellers=s.data![1]as List<AppUser>,drivers=s.data![2]as List<AppUser>;if(widget.user.role==UserRole.seller&&seller==null)seller=widget.user;return ListView(padding:const EdgeInsets.all(16),children:[const Text('بيع جديد',style:TextStyle(fontSize:23,fontWeight:FontWeight.bold)),gap,DropdownButtonFormField<InventoryItem>(value:item,decoration:const InputDecoration(labelText:'القطعة واللون'),items:inv.map((x)=>DropdownMenuItem(value:x,child:Text('${x.name} – ${x.color} (${x.length}م)'))).toList(),onChanged:(x)=>setState(()=>item=x)),gap,TextField(controller:customer,decoration:const InputDecoration(labelText:'اسم العميل (اختياري)')),gap,DropdownButtonFormField<AppUser>(value:seller,decoration:const InputDecoration(labelText:'البائع'),items:sellers.map((x)=>DropdownMenuItem(value:x,child:Text(x.name))).toList(),onChanged:(x)=>setState(()=>seller=x)),gap,Row(children:[Expanded(child:numberField(length,'الطول المقصوص م',onChanged:(_)=>setState((){}))),const SizedBox(width:8),Expanded(child:InputDecorator(decoration:const InputDecoration(labelText:'المساحة'),child:Text('${area.toStringAsFixed(2)} م²')))]),gap,numberField(price,'سعر البيع للم²',onChanged:(_)=>setState((){})),gap,numberField(installation,'التركيب'),gap,Row(children:[Expanded(child:numberField(glueGallons,'غراء (جالون)')),const SizedBox(width:8),Expanded(child:numberField(glueCost,'قيمة الغراء'))]),gap,Row(children:[Expanded(child:numberField(ironPieces,'حديد (قطعة)')),const SizedBox(width:8),Expanded(child:numberField(ironCost,'قيمة الحديد'))]),gap,DropdownButtonFormField<AppUser>(value:driver,decoration:const InputDecoration(labelText:'السائق'),items:drivers.map((x)=>DropdownMenuItem(value:x,child:Text(x.name))).toList(),onChanged:(x)=>setState(()=>driver=x)),gap,numberField(driverFee,'حساب المشوار'),gap,Row(children:[Expanded(child:select(customerPay,'دفع العميل',['كاش','شبكة','Visa','Tabby','Tamara'],(x)=>setState(()=>customerPay=x!))),const SizedBox(width:8),Expanded(child:select(driverPay,'دفع السائق',['كاش','تحويل بنكي'],(x)=>setState(()=>driverPay=x!)))]),gap,Card(color:Theme.of(c).colorScheme.primaryContainer,child:Padding(padding:const EdgeInsets.all(14),child:Column(children:[row('إجمالي البيع',money(total)),row('رسوم الدفع',money(fee())),row('الصافي',money(total-fee()),bold:true)]))),const SizedBox(height:15),FilledButton(onPressed:save,child:const Padding(padding:EdgeInsets.all(12),child:Text('حفظ البيع وخصم المخزون')))]);});}}
 
 class SettlementPage extends StatelessWidget { const SettlementPage({super.key,required this.inst,required this.user}); final Institution inst; final AppUser user;
-  @override Widget build(BuildContext c)=>FutureBuilder<List<dynamic>>(future:Future.wait([ShopDatabase.instance.users(inst.id!,role:UserRole.seller),ShopDatabase.instance.sales(inst.id!)]),builder:(c,s){if(!s.hasData)return const Center(child:CircularProgressIndicator());final sellers=s.data![0]as List<AppUser>,sales=s.data![1]as List<Sale>;return ListView(padding:const EdgeInsets.all(16),children:[const Text('التصفية الشهرية',style:TextStyle(fontSize:23,fontWeight:FontWeight.bold)),const Text('عمولة البائع = (سعر البيع − سعر الجملة) × المساحة × نسبة العمولة.'),gap,...sellers.map((seller){final mine=sales.where((x)=>x.sellerId==seller.id&&sameMonth(x.createdAt)).toList();return FutureBuilder<List<dynamic>>(future:Future.wait([ShopDatabase.instance.ledger(inst.id!,seller.id!),ShopDatabase.instance.inventory(inst.id!)]),builder:(c,x){if(!x.hasData)return const SizedBox();final entries=x.data![0]as List<LedgerEntry>, items=x.data![1]as List<InventoryItem>;double commission=0,glue=0,iron=0;for(final sale in mine){final it=items.firstWhere((i)=>i.id==sale.inventoryId);commission+=(sale.salePrice-it.wholesalePrice)*sale.area*seller.commissionRate;glue+=sale.glueGallons;iron+=sale.ironPieces;}final deductions=entries.fold<double>(0,(a,e)=>a+e.amount);final salary=seller.workPlan==WorkPlan.commission?0:seller.salary;final gross=(seller.workPlan==WorkPlan.salary?salary:salary+commission);return Card(child:ExpansionTile(title:Text(seller.name),subtitle:Text('${seller.workPlan.title} • ${mine.length} مبيعات'),trailing:Text(money(gross-deductions),style:const TextStyle(fontWeight:FontWeight.bold)),childrenPadding:const EdgeInsets.all(16),children:[row('راتب',money(salary)),row('عمولات',money(seller.workPlan==WorkPlan.salary?0:commission)),row('استهلاك غراء','${glue.toStringAsFixed(2)} جالون'),row('استهلاك حديد','${iron.toStringAsFixed(0)} قطعة'),row('مسحوبات / مصاريف',money(deductions)),const Divider(),row('صافي المستحق',money(gross-deductions),bold:true),if(user.role!=UserRole.seller)Align(alignment:Alignment.centerLeft,child:TextButton.icon(onPressed:()=>openLedger(c,inst,seller),icon:const Icon(Icons.add),label:const Text('تسجيل مسحوب/مصروف/خصم')))]));});})]);}); }
+  @override Widget build(BuildContext c)=>FutureBuilder<List<dynamic>>(future:Future.wait([ShopDatabase.instance.users(inst.id!,role:UserRole.seller),ShopDatabase.instance.sales(inst.id!)]),builder:(c,s){if(!s.hasData)return const Center(child:CircularProgressIndicator());final sellers=s.data![0]as List<AppUser>,sales=s.data![1]as List<Sale>;return ListView(padding:const EdgeInsets.all(16),children:[const Text('التصفية الشهرية',style:TextStyle(fontSize:23,fontWeight:FontWeight.bold)),const Text('عمولة البائع = (سعر البيع − سعر الجملة) × المساحة × نسبة العمولة.'),gap,...sellers.map((seller){final mine=sales.where((x)=>x.sellerId==seller.id&&sameMonth(x.createdAt)).toList();return FutureBuilder<List<dynamic>>(future:Future.wait([ShopDatabase.instance.ledger(inst.id!,seller.id!),ShopDatabase.instance.inventory(inst.id!)]),builder:(c,x){if(!x.hasData)return const SizedBox();final entries=x.data![0]as List<LedgerEntry>, items=x.data![1]as List<InventoryItem>;double commission=0,glue=0,iron=0;for(final sale in mine){final it=items.firstWhere((i)=>i.id==sale.inventoryId);commission+=(sale.salePrice-it.wholesalePrice)*sale.area*seller.commissionRate;glue+=sale.glueGallons;iron+=sale.ironPieces;}final deductions=entries.fold<double>(0,(a,e)=>a+e.amount);final salary=seller.workPlan==WorkPlan.commission?0.0:seller.salary;final gross=(seller.workPlan==WorkPlan.salary?salary:salary+commission);return Card(child:ExpansionTile(title:Text(seller.name),subtitle:Text('${seller.workPlan.title} • ${mine.length} مبيعات'),trailing:Text(money(gross-deductions),style:const TextStyle(fontWeight:FontWeight.bold)),childrenPadding:const EdgeInsets.all(16),children:[row('راتب',money(salary)),row('عمولات',money(seller.workPlan==WorkPlan.salary?0.0:commission)),row('استهلاك غراء','${glue.toStringAsFixed(2)} جالون'),row('استهلاك حديد','${iron.toStringAsFixed(0)} قطعة'),row('مسحوبات / مصاريف',money(deductions)),const Divider(),row('صافي المستحق',money(gross-deductions),bold:true),if(user.role!=UserRole.seller)Align(alignment:Alignment.centerLeft,child:TextButton.icon(onPressed:()=>openLedger(c,inst,seller),icon:const Icon(Icons.add),label:const Text('تسجيل مسحوب/مصروف/خصم')))]));});})]);}); }
 }
 
-class DriverPage extends StatelessWidget {const DriverPage({super.key,required this.inst,required this.user});final Institution inst;final AppUser user;@override Widget build(BuildContext c)=>FutureBuilder<List<Sale>>(future:ShopDatabase.instance.sales(inst.id!),builder:(c,s){if(!s.hasData)return const Center(child:CircularProgressIndicator());final trips=s.data!.where((x)=>x.driverId==user.id).toList();final total=trips.fold<double>(0,(a,x)=>a+x.driverFee);return ListView(padding:const EdgeInsets.all(16),children:[const Text('حساب السائق',style:TextStyle(fontSize:23,fontWeight:FontWeight.bold)),const Text('هذا الحساب منفصل لهذه المؤسسة.'),gap,Metric('إجمالي المشاوير',money(total),Icons.local_shipping),gap,...trips.map((x)=>Card(child:ListTile(leading:const Icon(Icons.route),title:Text('مشوار ${x.customerName.isEmpty?'عميل':x.customerName}'),subtitle:Text('${date(x.createdAt)} • ${x.driverPayment}'),trailing:Text(money(x.driverFee))))]);});}
+class DriverPage extends StatelessWidget {
+  const DriverPage({super.key, required this.inst, required this.user});
+  final Institution inst;
+  final AppUser user;
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<Sale>>(
+        future: ShopDatabase.instance.sales(inst.id!),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          final trips = snapshot.data!.where((x) => x.driverId == user.id).toList();
+          final total = trips.fold<double>(0, (a, x) => a + x.driverFee);
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const Text('حساب السائق', style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold)),
+              const Text('هذا الحساب منفصل لهذه المؤسسة.'),
+              gap,
+              Metric('إجمالي المشاوير', money(total), Icons.local_shipping),
+              gap,
+              ...trips.map(
+                (trip) => Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.route),
+                    title: Text('مشوار ${trip.customerName.isEmpty ? 'عميل' : trip.customerName}'),
+                    subtitle: Text('${date(trip.createdAt)} • ${trip.driverPayment}'),
+                    trailing: Text(money(trip.driverFee)),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+}
 
 class ProfilePage extends StatelessWidget {const ProfilePage({super.key,required this.inst,required this.user});final Institution inst;final AppUser user;@override Widget build(BuildContext c)=>Center(child:Column(mainAxisSize:MainAxisSize.min,children:[CircleAvatar(radius:35,child:Icon(roleIcon(user.role),size:34)),const SizedBox(height:10),Text(user.name,style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),Text('${inst.name}\n${user.phone}') ]));}
 
 class SettingsPage extends StatelessWidget {const SettingsPage({super.key,required this.inst,required this.user});final Institution inst;final AppUser user;@override Widget build(BuildContext c){final canEdit=user.role==UserRole.owner||user.role==UserRole.accountant;return ListView(padding:const EdgeInsets.all(16),children:[const Text('الإدارة',style:TextStyle(fontSize:23,fontWeight:FontWeight.bold)),ListTile(leading:const Icon(Icons.business),title:const Text('بيانات المؤسسة'),subtitle:Text('${inst.commercialRegistration} • ضريبة ${inst.taxNumber}'),),ListTile(enabled:canEdit,leading:const Icon(Icons.people),title:const Text('المستخدمون'),onTap:canEdit?()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>UserSetup(institutionId:inst.id!,institutionName:inst.name))):null),ListTile(enabled:canEdit,leading:const Icon(Icons.local_shipping_outlined),title:const Text('الموردون'),onTap:canEdit?()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>SuppliersPage(inst:inst))):null),const Divider(),const InfoCard('عروض الأسعار والفواتير وPDF/QR ستأتي بعد تثبيت دورة التشغيل الأساسية على بيانات حقيقية.')]);}}
 
 class SuppliersPage extends StatefulWidget {const SuppliersPage({super.key,required this.inst});final Institution inst;@override State<SuppliersPage>createState()=>_SuppliersPageState();}
-class _SuppliersPageState extends State<SuppliersPage>{late Future<List<Supplier>> data;@override void initState(){super.initState();load();}void load()=>data=ShopDatabase.instance.suppliers(widget.inst.id!);Future<void>add()async{final name=TextEditingController(),phone=TextEditingController();await showDialog(context:context,builder:(d)=>AlertDialog(title:const Text('مورد جديد'),content:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:name,decoration:const InputDecoration(labelText:'الاسم')),gap,TextField(controller:phone,decoration:const InputDecoration(labelText:'رقم الهاتف'))]),actions:[TextButton(onPressed:()=>Navigator.pop(d),child:const Text('إلغاء')),FilledButton(onPressed:()async{if(name.text.trim().isEmpty)return;await ShopDatabase.instance.addSupplier(Supplier(institutionId:widget.inst.id!,name:name.text.trim(),phone:phone.text.trim()));if(d.mounted)Navigator.pop(d);},child:const Text('حفظ'))]));setState(load);}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('الموردون')),body:FutureBuilder<List<Supplier>>(future:data,builder:(c,s)=>!s.hasData?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.all(16),children:[const Text('قائمة الموردين',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),...s.data!.map((x)=>Card(child:ListTile(leading:const Icon(Icons.factory_outlined),title:Text(x.name),subtitle:Text(x.phone),trailing:const Text('المشتريات والمدفوع والآجل\nتظهر مع أوامر الشراء'))))])),floatingActionButton:FloatingActionButton.extended(onPressed:add,label:const Text('إضافة مورد'),icon:const Icon(Icons.add)));}}
+class _SuppliersPageState extends State<SuppliersPage> {
+  late Future<List<Supplier>> data;
+  @override
+  void initState() { super.initState(); load(); }
+  void load() => data = ShopDatabase.instance.suppliers(widget.inst.id!);
+  Future<void> add() async {
+    final name = TextEditingController(), phone = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('مورد جديد'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: name, decoration: const InputDecoration(labelText: 'الاسم')),
+          gap,
+          TextField(controller: phone, decoration: const InputDecoration(labelText: 'رقم الهاتف')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+          FilledButton(
+            onPressed: () async {
+              if (name.text.trim().isEmpty) return;
+              await ShopDatabase.instance.addSupplier(Supplier(
+                institutionId: widget.inst.id!, name: name.text.trim(), phone: phone.text.trim()));
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+            },
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+    setState(load);
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('الموردون')),
+        body: FutureBuilder<List<Supplier>>(
+          future: data,
+          builder: (context, snapshot) => !snapshot.hasData
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    const Text('قائمة الموردين', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    ...snapshot.data!.map(
+                      (supplier) => Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.factory_outlined),
+                          title: Text(supplier.name),
+                          subtitle: Text(supplier.phone),
+                          trailing: const Text('المشتريات والمدفوع والآجل\nتظهر مع أوامر الشراء'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: add, label: const Text('إضافة مورد'), icon: const Icon(Icons.add)),
+      );
+}
 
 Future<void> openLedger(BuildContext c,Institution inst,AppUser seller)async{final amount=TextEditingController(),noteC=TextEditingController();String kind='مسحوب';await showDialog(context:c,builder:(dialogContext)=>StatefulBuilder(builder:(innerContext,set){return AlertDialog(title:Text('حركة ${seller.name}'),content:Column(mainAxisSize:MainAxisSize.min,children:[DropdownButtonFormField(value:kind,items:['مسحوب','مصروف','خصم','مدفوعات'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(x)=>set(()=>kind=x!)),gap,numberField(amount,'المبلغ'),gap,TextField(controller:noteC,decoration:const InputDecoration(labelText:'ملاحظة'))]),actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext),child:const Text('إلغاء')),FilledButton(onPressed:()async{if(d(amount)<=0)return;await ShopDatabase.instance.addLedger(LedgerEntry(institutionId:inst.id!,userId:seller.id!,kind:kind,amount:d(amount),note:noteC.text.trim(),createdAt:DateTime.now()));if(dialogContext.mounted)Navigator.pop(dialogContext);},child:const Text('حفظ'))]);}));}
 
