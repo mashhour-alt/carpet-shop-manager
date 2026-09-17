@@ -15,7 +15,7 @@ class InstitutionOperationsPage extends StatefulWidget {
 }
 
 class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
-  late final Future<List<SupplierRecord>> _suppliers = widget.repository.loadSuppliers(widget.membership.institutionId);
+  late Future<List<SupplierRecord>> _suppliers = widget.repository.loadSuppliers(widget.membership.institutionId);
   late Future<List<InventoryRecord>> _inventory = widget.repository.loadInventory(widget.membership.institutionId);
 
   bool get canManage => widget.membership.role != InstitutionRole.seller;
@@ -119,7 +119,7 @@ class SalesSettlementPage extends StatefulWidget {
 }
 
 class _SalesSettlementPageState extends State<SalesSettlementPage> {
-  late Future<List<SupplierRecord>> _suppliers = widget.repository.loadSuppliers(widget.membership.institutionId);
+  late final Future<List<SupplierRecord>> _suppliers = widget.repository.loadSuppliers(widget.membership.institutionId);
   late Future<List<InventoryRecord>> _inventory = widget.repository.loadInventory(widget.membership.institutionId);
   late final Future<List<PersonOption>> _sellers = widget.repository.loadSellers(widget.membership.institutionId);
   late final Future<List<PersonOption>> _drivers = widget.repository.loadDriverOptions(widget.membership.institutionId);
