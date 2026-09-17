@@ -15,7 +15,7 @@ class InstitutionOperationsPage extends StatefulWidget {
 }
 
 class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
-  late Future<List<SupplierRecord>> _suppliers = widget.repository.loadSuppliers(widget.membership.institutionId);
+  late final Future<List<SupplierRecord>> _suppliers = widget.repository.loadSuppliers(widget.membership.institutionId);
   late Future<List<InventoryRecord>> _inventory = widget.repository.loadInventory(widget.membership.institutionId);
 
   bool get canManage => widget.membership.role != InstitutionRole.seller;
@@ -121,8 +121,8 @@ class SalesSettlementPage extends StatefulWidget {
 class _SalesSettlementPageState extends State<SalesSettlementPage> {
   late Future<List<SupplierRecord>> _suppliers = widget.repository.loadSuppliers(widget.membership.institutionId);
   late Future<List<InventoryRecord>> _inventory = widget.repository.loadInventory(widget.membership.institutionId);
-  late Future<List<PersonOption>> _sellers = widget.repository.loadSellers(widget.membership.institutionId);
-  late Future<List<PersonOption>> _drivers = widget.repository.loadDriverOptions(widget.membership.institutionId);
+  late final Future<List<PersonOption>> _sellers = widget.repository.loadSellers(widget.membership.institutionId);
+  late final Future<List<PersonOption>> _drivers = widget.repository.loadDriverOptions(widget.membership.institutionId);
   final _customer = TextEditingController(); final _length = TextEditingController(); final _price = TextEditingController();
   final _installation = TextEditingController(text: '0'); final _glueQty = TextEditingController(text: '0'); final _glueAmount = TextEditingController(text: '0');
   final _ironQty = TextEditingController(text: '0'); final _ironAmount = TextEditingController(text: '0'); final _driverFee = TextEditingController(text: '0');
