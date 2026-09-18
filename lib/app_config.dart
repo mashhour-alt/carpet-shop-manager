@@ -15,10 +15,10 @@ class AppConfig {
 
   // GitHub Actions expands missing repository variables to empty strings.
   // Empty build-time values must not disable the app's production connection.
-  static const supabaseUrl = _configuredSupabaseUrl.isEmpty
+  static final supabaseUrl = _configuredSupabaseUrl.isEmpty
       ? _defaultSupabaseUrl
       : _configuredSupabaseUrl;
-  static const supabasePublishableKey =
+  static final supabasePublishableKey =
       _configuredSupabasePublishableKey.isEmpty
       ? _defaultSupabasePublishableKey
       : _configuredSupabasePublishableKey;
