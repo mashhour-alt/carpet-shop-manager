@@ -318,4 +318,41 @@ class FarshaRepository {
       'p_payment_method': paymentMethod,
     });
   }
+
+  Future<List<SaleInvoiceCandidate>> loadSalesForInvoicing(String institutionId) async {
+    final rows = await client
+        .from('sales')
+        .select('id,customer_name,total,created_at,inventory_items(name,color),invoices(id)')
+        .eq('institution_id', institutionId)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .map((row) => SaleInvoiceCandidate.fromMap(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<String> issueTaxInvoice({
+    required String saleId,
+    required String customerName,
+    required String customerCommercialRegistration,
+    required String customerTaxNumber,
+  }) async {
+    final result = await client.rpc('issue_tax_invoice', params: {
+      'p_sale_id': saleId,
+      'p_customer_name': customerName.trim(),
+      'p_customer_cr': customerCommercialRegistration.trim(),
+      'p_customer_tax': customerTaxNumber.trim(),
+    });
+    return result as String;
+  }
+
+  Future<List<TaxInvoiceRecord>> loadTaxInvoices(String institutionId) async {
+    final rows = await client
+        .from('invoices')
+        .select('id,invoice_number,customer_name,customer_commercial_registration,customer_tax_number,item_name,color,length,width,area,price_per_sqm,carpet_amount,installation_amount,glue_gallons,glue_amount,iron_pieces,iron_amount,driver_fee,payment_method,subtotal,vat_amount,total_with_vat,issued_at')
+        .eq('institution_id', institutionId)
+        .order('issued_at', ascending: false);
+    return (rows as List)
+        .map((row) => TaxInvoiceRecord.fromMap(row as Map<String, dynamic>))
+        .toList();
+  }
 }

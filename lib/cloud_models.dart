@@ -283,3 +283,122 @@ class QuotationRecord {
             .toList(),
       );
 }
+
+class SaleInvoiceCandidate {
+  const SaleInvoiceCandidate({
+    required this.id,
+    required this.customerName,
+    required this.itemName,
+    required this.color,
+    required this.createdAt,
+    required this.total,
+    this.invoiceId,
+  });
+
+  final String id;
+  final String customerName;
+  final String itemName;
+  final String color;
+  final DateTime createdAt;
+  final double total;
+  final String? invoiceId;
+  bool get hasInvoice => invoiceId != null;
+
+  factory SaleInvoiceCandidate.fromMap(Map<String, dynamic> map) {
+    final item = map['inventory_items'] as Map<String, dynamic>;
+    final invoiceRelation = map['invoices'];
+    String? invoiceId;
+    if (invoiceRelation is Map<String, dynamic>) {
+      invoiceId = invoiceRelation['id'] as String?;
+    } else if (invoiceRelation is List && invoiceRelation.isNotEmpty) {
+      invoiceId = (invoiceRelation.first as Map<String, dynamic>)['id'] as String?;
+    }
+    return SaleInvoiceCandidate(
+      id: map['id'] as String,
+      customerName: map['customer_name'] as String,
+      itemName: item['name'] as String,
+      color: item['color'] as String,
+      createdAt: DateTime.parse(map['created_at'] as String),
+      total: (map['total'] as num).toDouble(),
+      invoiceId: invoiceId,
+    );
+  }
+}
+
+class TaxInvoiceRecord {
+  const TaxInvoiceRecord({
+    required this.id,
+    required this.invoiceNumber,
+    required this.customerName,
+    required this.customerCommercialRegistration,
+    required this.customerTaxNumber,
+    required this.itemName,
+    required this.color,
+    required this.length,
+    required this.width,
+    required this.area,
+    required this.pricePerSquareMeter,
+    required this.carpetAmount,
+    required this.installationAmount,
+    required this.glueGallons,
+    required this.glueAmount,
+    required this.ironPieces,
+    required this.ironAmount,
+    required this.driverFee,
+    required this.paymentMethod,
+    required this.subtotal,
+    required this.vatAmount,
+    required this.totalWithVat,
+    required this.issuedAt,
+  });
+
+  final String id;
+  final int invoiceNumber;
+  final String customerName;
+  final String customerCommercialRegistration;
+  final String customerTaxNumber;
+  final String itemName;
+  final String color;
+  final double length;
+  final double width;
+  final double area;
+  final double pricePerSquareMeter;
+  final double carpetAmount;
+  final double installationAmount;
+  final double glueGallons;
+  final double glueAmount;
+  final double ironPieces;
+  final double ironAmount;
+  final double driverFee;
+  final String paymentMethod;
+  final double subtotal;
+  final double vatAmount;
+  final double totalWithVat;
+  final DateTime issuedAt;
+
+  factory TaxInvoiceRecord.fromMap(Map<String, dynamic> map) => TaxInvoiceRecord(
+        id: map['id'] as String,
+        invoiceNumber: (map['invoice_number'] as num).toInt(),
+        customerName: map['customer_name'] as String,
+        customerCommercialRegistration: map['customer_commercial_registration'] as String,
+        customerTaxNumber: map['customer_tax_number'] as String,
+        itemName: map['item_name'] as String,
+        color: map['color'] as String,
+        length: (map['length'] as num).toDouble(),
+        width: (map['width'] as num).toDouble(),
+        area: (map['area'] as num).toDouble(),
+        pricePerSquareMeter: (map['price_per_sqm'] as num).toDouble(),
+        carpetAmount: (map['carpet_amount'] as num).toDouble(),
+        installationAmount: (map['installation_amount'] as num).toDouble(),
+        glueGallons: (map['glue_gallons'] as num).toDouble(),
+        glueAmount: (map['glue_amount'] as num).toDouble(),
+        ironPieces: (map['iron_pieces'] as num).toDouble(),
+        ironAmount: (map['iron_amount'] as num).toDouble(),
+        driverFee: (map['driver_fee'] as num).toDouble(),
+        paymentMethod: map['payment_method'] as String,
+        subtotal: (map['subtotal'] as num).toDouble(),
+        vatAmount: (map['vat_amount'] as num).toDouble(),
+        totalWithVat: (map['total_with_vat'] as num).toDouble(),
+        issuedAt: DateTime.parse(map['issued_at'] as String),
+      );
+}
