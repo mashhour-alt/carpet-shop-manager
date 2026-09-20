@@ -329,9 +329,12 @@ class TaxInvoiceRecord {
   const TaxInvoiceRecord({
     required this.id,
     required this.invoiceNumber,
+    required this.invoiceKind,
+    required this.sellerName,
     required this.customerName,
     required this.customerCommercialRegistration,
     required this.customerTaxNumber,
+    required this.customerAddress,
     required this.itemName,
     required this.color,
     required this.length,
@@ -347,6 +350,8 @@ class TaxInvoiceRecord {
     required this.driverFee,
     required this.paymentMethod,
     required this.subtotal,
+    required this.discountAmount,
+    required this.taxableAmount,
     required this.vatAmount,
     required this.totalWithVat,
     required this.issuedAt,
@@ -354,9 +359,12 @@ class TaxInvoiceRecord {
 
   final String id;
   final int invoiceNumber;
+  final String invoiceKind;
+  final String sellerName;
   final String customerName;
   final String customerCommercialRegistration;
   final String customerTaxNumber;
+  final String customerAddress;
   final String itemName;
   final String color;
   final double length;
@@ -372,6 +380,8 @@ class TaxInvoiceRecord {
   final double driverFee;
   final String paymentMethod;
   final double subtotal;
+  final double discountAmount;
+  final double taxableAmount;
   final double vatAmount;
   final double totalWithVat;
   final DateTime issuedAt;
@@ -379,9 +389,12 @@ class TaxInvoiceRecord {
   factory TaxInvoiceRecord.fromMap(Map<String, dynamic> map) => TaxInvoiceRecord(
         id: map['id'] as String,
         invoiceNumber: (map['invoice_number'] as num).toInt(),
+        invoiceKind: map['invoice_kind'] as String,
+        sellerName: map['seller_name'] as String,
         customerName: map['customer_name'] as String,
         customerCommercialRegistration: map['customer_commercial_registration'] as String,
         customerTaxNumber: map['customer_tax_number'] as String,
+        customerAddress: map['customer_address'] as String,
         itemName: map['item_name'] as String,
         color: map['color'] as String,
         length: (map['length'] as num).toDouble(),
@@ -397,6 +410,8 @@ class TaxInvoiceRecord {
         driverFee: (map['driver_fee'] as num).toDouble(),
         paymentMethod: map['payment_method'] as String,
         subtotal: (map['subtotal'] as num).toDouble(),
+        discountAmount: (map['discount_amount'] as num).toDouble(),
+        taxableAmount: (map['taxable_amount'] as num).toDouble(),
         vatAmount: (map['vat_amount'] as num).toDouble(),
         totalWithVat: (map['total_with_vat'] as num).toDouble(),
         issuedAt: DateTime.parse(map['issued_at'] as String),
