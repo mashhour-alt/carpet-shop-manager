@@ -422,7 +422,7 @@ class TaxInvoiceDocument extends StatelessWidget {
   final InstitutionDocumentDetails institution;
   final TaxInvoiceRecord invoice;
 
-  List<_InvoiceLine> get lines => [
+  List<_InvoiceLine> get _lines => [
         _InvoiceLine(
           description:
               '${invoice.itemName} - ${invoice.color}\n${_money(invoice.length)}م × ${_money(invoice.width)}م = ${_money(invoice.area)}م²',
@@ -585,7 +585,7 @@ class TaxInvoiceDocument extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   const _ItemsHeader(),
-                  ...lines.asMap().entries.map(
+                  ..._lines.asMap().entries.map(
                         (entry) => _ItemRow(
                           index: entry.key + 1,
                           line: entry.value,
