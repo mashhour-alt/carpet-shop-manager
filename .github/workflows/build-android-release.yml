@@ -29,9 +29,20 @@ jobs:
         run: flutter create --platforms=android --project-name farsha --org sa.farsha.app .
       - name: Install packages
         run: flutter pub get
-      - name: Apply Farsha name and launcher icon
+      - name: Configure Android release app
         run: |
           sed -i 's/android:label="farsha"/android:label="فرشة"/' android/app/src/main/AndroidManifest.xml
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          source = manifest.read_text()
+          permission = '    <uses-permission android:name="android.permission.INTERNET" />\n'
+          if 'android.permission.INTERNET' not in source:
+              source = source.replace('<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n', '<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n' + permission)
+          manifest.write_text(source)
+          PY
+          grep -q 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml
           dart run flutter_launcher_icons
       - name: Static analysis and tests
         run: |
