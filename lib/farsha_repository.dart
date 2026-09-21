@@ -412,4 +412,9 @@ class FarshaRepository {
     await client.rpc('save_addon_type',params:{'p_institution_id':institutionId,'p_name':name.trim(),'p_unit':unit.trim(),'p_sale_price':salePrice,'p_cost_price':costPrice,'p_supplier_id':supplierId});
   }
 
+  Future<List<InstitutionTrip>> loadInstitutionTripsRange(String institutionId,DateTime from,DateTime to) async {
+    final rows=await client.from('driver_trips').select('id,trip_date,amount,payment_status,payment_method,driver:driver_profiles!driver_trips_driver_id_fkey(profiles(full_name)),seller:profiles!driver_trips_seller_id_fkey(full_name)').eq('institution_id',institutionId).gte('trip_date',from.toIso8601String().split('T').first).lt('trip_date',to.toIso8601String().split('T').first).order('trip_date',ascending:false);
+    return (rows as List).map((row){final da=row['driver'] as Map<String,dynamic>?;final dp=da?['profiles'] as Map<String,dynamic>?;final sp=row['seller'] as Map<String,dynamic>?;return InstitutionTrip(id:row['id'] as String,driverName:dp?['full_name'] as String? ?? 'سائق',sellerName:sp?['full_name'] as String? ?? 'بائع',date:DateTime.parse(row['trip_date'] as String),amount:(row['amount'] as num).toDouble(),isPaid:row['payment_status']=='paid',paymentMethod:row['payment_method'] as String?);}).toList();
+  }
+
 }
