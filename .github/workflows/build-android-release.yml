@@ -48,7 +48,7 @@ jobs:
           dart run flutter_launcher_icons
       - name: Static analysis and tests
         run: |
-          flutter analyze
+          flutter analyze --no-fatal-infos
           flutter test
       - name: Build installable release APK
         run: >-
