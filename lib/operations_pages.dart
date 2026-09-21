@@ -26,14 +26,22 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
       });
 
   Future<void> _addAddonType(List<SupplierRecord> suppliers) async {
-    final name=TextEditingController(),unit=TextEditingController(text:'piece'),sale=TextEditingController(text:'0'),cost=TextEditingController(text:'0');String? supplierId;
-    final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setD)=>AlertDialog(title:const Text('نوع إضافة'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      TextField(controller:name,decoration:const InputDecoration(labelText:'الاسم')),const SizedBox(height:8),TextField(controller:unit,decoration:const InputDecoration(labelText:'الوحدة: piece / sqm / gallon / job')),
-      const SizedBox(height:8),TextField(controller:sale,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع الافتراضي')),const SizedBox(height:8),TextField(controller:cost,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'التكلفة على المؤسسة')),
-      if(suppliers.isNotEmpty)...[const SizedBox(height:8),DropdownButtonFormField<String?>(initialValue:supplierId,decoration:const InputDecoration(labelText:'المورد (اختياري)'),items:[const DropdownMenuItem<String?>(value:null,child:Text('بدون مورد')),...suppliers.map((x)=>DropdownMenuItem<String?>(value:x.id,child:Text(x.name)))],onChanged:(v)=>setD(()=>supplierId=v))]])),
-      actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('حفظ'))])));
-    final nm=name.text.trim(),un=unit.text.trim(),sp=_number(sale),cp=_number(cost);for(final x in[name,unit,sale,cost])x.dispose();if(ok!=true||nm.isEmpty||un.isEmpty||sp<0||cp<0)return;
-    await widget.repository.saveAddonType(institutionId:widget.membership.institutionId,name:nm,unit:un,salePrice:sp,costPrice:cp,supplierId:supplierId);_show('تم حفظ نوع الإضافة');
+    final name=TextEditingController(),unit=TextEditingController(text:'piece'),sale=TextEditingController(text:'0'),cost=TextEditingController(text:'0'),opening=TextEditingController(text:'0'),low=TextEditingController(text:'0');
+    String? supplierId;String behavior='customer_addon',basis='quantity';bool track=false,visible=true,charge=false;
+    final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setD)=>AlertDialog(title:const Text('نوع إضافة / مستلزم'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      TextField(controller:name,decoration:const InputDecoration(labelText:'الاسم')),const SizedBox(height:8),
+      DropdownButtonFormField<String>(initialValue:behavior,decoration:const InputDecoration(labelText:'الاستخدام'),items:const [DropdownMenuItem(value:'customer_addon',child:Text('بند يظهر للعميل')),DropdownMenuItem(value:'internal_consumable',child:Text('مستلزم داخلي - مثل الغراء'))],onChanged:(v)=>setD(()=>behavior=v!)),
+      const SizedBox(height:8),DropdownButtonFormField<String>(initialValue:basis,decoration:const InputDecoration(labelText:'طريقة حساب الكمية'),items:const [DropdownMenuItem(value:'quantity',child:Text('كمية يدوية')),DropdownMenuItem(value:'sale_area',child:Text('مساحة الموكيت م² - مناسب للباد'))],onChanged:(v)=>setD(()=>basis=v!)),
+      const SizedBox(height:8),TextField(controller:unit,decoration:const InputDecoration(labelText:'الوحدة: قطعة / م² / جالون / خدمة')),
+      const SizedBox(height:8),TextField(controller:sale,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع الافتراضي')),const SizedBox(height:8),TextField(controller:cost,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'التكلفة الداخلية')),
+      SwitchListTile(value:track,onChanged:(v)=>setD(()=>track=v),title:const Text('تتبع مخزون هذا المستلزم'),contentPadding:EdgeInsets.zero),
+      if(track)...[TextField(controller:opening,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'الرصيد الافتتاحي')),const SizedBox(height:8),TextField(controller:low,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'حد المخزون المنخفض'))],
+      SwitchListTile(value:visible,onChanged:(v)=>setD(()=>visible=v),title:const Text('يظهر للعميل'),contentPadding:EdgeInsets.zero),
+      if(behavior=='internal_consumable')SwitchListTile(value:charge,onChanged:(v)=>setD(()=>charge=v),title:const Text('يُحمّل على حساب البائع'),contentPadding:EdgeInsets.zero),
+      if(suppliers.isNotEmpty)DropdownButtonFormField<String?>(initialValue:supplierId,decoration:const InputDecoration(labelText:'المورد'),items:[const DropdownMenuItem<String?>(value:null,child:Text('بدون مورد')),...suppliers.map((x)=>DropdownMenuItem<String?>(value:x.id,child:Text(x.name)))],onChanged:(v)=>setD(()=>supplierId=v))
+    ])),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('حفظ'))])));
+    final nm=name.text.trim(),un=unit.text.trim(),sp=_number(sale),cp=_number(cost),op=_number(opening),lo=_number(low);for(final x in[name,unit,sale,cost,opening,low])x.dispose();if(ok!=true||nm.isEmpty||un.isEmpty)return;
+    await widget.repository.saveAddonTypeV2(institutionId:widget.membership.institutionId,name:nm,unit:un,salePrice:sp,costPrice:cp,supplierId:supplierId,behavior:behavior,calculationBasis:basis,trackStock:track,openingStock:op,lowStockAt:lo,customerVisible:visible,chargeToSeller:charge);_show('تم حفظ الإضافة/المستلزم');
   }
 
   Future<void> _addSupplier() async {
