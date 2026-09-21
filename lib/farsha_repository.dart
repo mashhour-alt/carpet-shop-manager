@@ -408,4 +408,8 @@ class FarshaRepository {
     return List<Map<String,dynamic>>.from(rows);
   }
 
+  Future<void> saveAddonType({required String institutionId,required String name,required String unit,required double salePrice,required double costPrice,String? supplierId}) async {
+    await client.rpc('save_addon_type',params:{'p_institution_id':institutionId,'p_name':name.trim(),'p_unit':unit.trim(),'p_sale_price':salePrice,'p_cost_price':costPrice,'p_supplier_id':supplierId});
+  }
+
 }
