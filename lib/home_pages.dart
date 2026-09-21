@@ -5,6 +5,7 @@ import 'cloud_models.dart';
 import 'documents_page.dart';
 import 'farsha_repository.dart';
 import 'operations_pages.dart';
+import 'operating_reports_page.dart';
 
 class ProfileRouter extends StatefulWidget {
   const ProfileRouter({super.key});
@@ -219,10 +220,11 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
       InstitutionOverview(membership: widget.membership, repository: widget.repository),
       if (manager) MembersPage(membership: widget.membership, repository: widget.repository),
       InstitutionOperationsPage(membership: widget.membership, repository: widget.repository),
+      if (manager) OperatingReportsPage(membership: widget.membership, repository: widget.repository),
       DocumentsPage(membership: widget.membership, repository: widget.repository),
       SalesSettlementPage(membership: widget.membership, repository: widget.repository),
     ];
-    final labels = <String>['الرئيسية', if (manager) 'المستخدمون', 'المخزون', 'المستندات', 'البيع'];
+    final labels = <String>['الرئيسية', if (manager) 'المستخدمون', 'المخزون', if (manager) 'التقارير', 'المستندات', 'البيع'];
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.membership.institutionName),
@@ -243,6 +245,7 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
         'الرئيسية' => Icons.home_outlined,
         'المستخدمون' => Icons.people_outline,
         'المخزون' => Icons.inventory_2_outlined,
+        'التقارير' => Icons.analytics_outlined,
         'المستندات' => Icons.description_outlined,
         _ => Icons.point_of_sale,
       };
