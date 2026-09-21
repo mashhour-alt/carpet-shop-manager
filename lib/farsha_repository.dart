@@ -390,4 +390,14 @@ class FarshaRepository {
     await client.rpc('void_sale',params:{'p_sale_id':saleId,'p_reason':reason.trim()});
   }
 
+  Future<SellerPerformanceRecord> loadSellerPerformance(String institutionId,String sellerId,DateTime from,DateTime to) async {
+    final rows=await client.rpc('seller_performance',params:{'p_institution_id':institutionId,'p_seller_id':sellerId,'p_from':from.toIso8601String(),'p_to':to.toIso8601String()});
+    return SellerPerformanceRecord.fromMap((rows as List).first as Map<String,dynamic>);
+  }
+
+  Future<List<Map<String,dynamic>>> loadPaymentReport(String institutionId,DateTime from,DateTime to) async {
+    final rows=await client.from('sale_payments').select('method,amount,sale_id,paid_at').eq('institution_id',institutionId).gte('paid_at',from.toIso8601String()).lt('paid_at',to.toIso8601String()).order('paid_at',ascending:false);
+    return List<Map<String,dynamic>>.from(rows);
+  }
+
 }
