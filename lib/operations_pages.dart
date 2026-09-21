@@ -27,7 +27,6 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
 
   Future<void> _addAddonType(List<SupplierRecord> suppliers) async {
     final name=TextEditingController(),unit=TextEditingController(text:'piece'),sale=TextEditingController(text:'0'),cost=TextEditingController(text:'0');String? supplierId;
-    if(type.calculationBasis=='sale_area'){qty.text=(n(length)*4).toStringAsFixed(2);}
     final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setD)=>AlertDialog(title:const Text('نوع إضافة'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
       TextField(controller:name,decoration:const InputDecoration(labelText:'الاسم')),const SizedBox(height:8),TextField(controller:unit,decoration:const InputDecoration(labelText:'الوحدة: piece / sqm / gallon / job')),
       const SizedBox(height:8),TextField(controller:sale,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع الافتراضي')),const SizedBox(height:8),TextField(controller:cost,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'التكلفة على المؤسسة')),
@@ -172,9 +171,9 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
   }
   Future<void> addAddon(List<AddonTypeRecord> types) async {
     if(types.isEmpty)return msg('أضف أنواع الإضافات من إعدادات المؤسسة');
-    AddonTypeRecord type=types.first;final qty=TextEditingController(text:'1'),sale=TextEditingController(text:type.defaultSalePrice.toStringAsFixed(2));
+    AddonTypeRecord type=types.first;final qty=TextEditingController(text:type.calculationBasis=='sale_area'?(n(length)*4).toStringAsFixed(2):'1'),sale=TextEditingController(text:type.defaultSalePrice.toStringAsFixed(2));
     final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setD)=>AlertDialog(title:const Text('إضافة للبيعة'),content:Column(mainAxisSize:MainAxisSize.min,children:[
-      DropdownButtonFormField<String>(initialValue:type.id,decoration:const InputDecoration(labelText:'الإضافة'),items:types.map((x)=>DropdownMenuItem(value:x.id,child:Text(x.name))).toList(),onChanged:(v){setD((){type=types.firstWhere((x)=>x.id==v);sale.text=type.defaultSalePrice.toStringAsFixed(2);});}),
+      DropdownButtonFormField<String>(initialValue:type.id,decoration:const InputDecoration(labelText:'الإضافة'),items:types.map((x)=>DropdownMenuItem(value:x.id,child:Text(x.name))).toList(),onChanged:(v){setD((){type=types.firstWhere((x)=>x.id==v);sale.text=type.defaultSalePrice.toStringAsFixed(2);if(type.calculationBasis=='sale_area')qty.text=(n(length)*4).toStringAsFixed(2);});}),
       const SizedBox(height:8),TextField(controller:qty,keyboardType:TextInputType.number,decoration:InputDecoration(labelText:'الكمية ('+type.unit+')')),const SizedBox(height:8),TextField(controller:sale,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع للوحدة'))]),
       actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('إضافة'))])));
     final q=n(qty),sp=n(sale);qty.dispose();sale.dispose();if(ok==true&&q>0&&sp>=0)setState(()=>addons.add(SaleAddonInput(addonTypeId:type.id,name:type.name,unit:type.unit,quantity:q,saleUnitPrice:sp,costUnitPrice:type.defaultCostPrice)));
@@ -202,13 +201,13 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
       const SizedBox(height:8),Row(children:[Expanded(child:TextField(controller:length,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'الطول م'))),const SizedBox(width:8),Expanded(child:TextField(controller:price,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع/م²')))]),
       Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text('المساحة: '+(n(length)*4).toStringAsFixed(2)+' م² • العرض 4 م')),
       OutlinedButton.icon(onPressed:()=>addAddon(customerAddons),icon:const Icon(Icons.add),label:const Text('إضافة تركيب / لباد / حديد')),
-      ...addons.asMap().entries.map((e)=>ListTile(title:Text(e.value.name+' × '+e.value.quantity.toStringAsFixed(2)),subtitle:Text((e.value.saleTotal).toStringAsFixed(2)+' ر.س'),trailing:IconButton(icon:const Icon(Icons.delete_outline),onPressed:()=>setState(()=>addons.removeAt(e.key))))),
+      ...addons.asMap().entries.map((e)=>ListTile(title:Text(e.value.name+' × '+e.value.quantity.toStringAsFixed(2)),subtitle:Text((e.value.saleTotal).toStringAsFixed(2)+' ﷼'),trailing:IconButton(icon:const Icon(Icons.delete_outline),onPressed:()=>setState(()=>addons.removeAt(e.key))))),
       const SizedBox(height:8),DropdownButtonFormField<String?>(initialValue:driverId,decoration:const InputDecoration(labelText:'السائق (اختياري)'),items:[const DropdownMenuItem<String?>(value:null,child:Text('بدون سائق')),...dd.data!.map((x)=>DropdownMenuItem<String?>(value:x.id,child:Text(x.name)))],onChanged:(v)=>setState(()=>driverId=v)),
       const SizedBox(height:8),TextField(controller:driverFee,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'تكلفة السائق')),
       const SizedBox(height:8),TextField(controller:notes,maxLines:2,decoration:const InputDecoration(labelText:'ملاحظات')),
-      const Divider(height:28),Text('إجمالي البيع: '+t.toStringAsFixed(2)+' ر.س',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18)),
-      ...payments.asMap().entries.map((e)=>ListTile(title:Text(e.value.method),subtitle:Text(e.value.amount.toStringAsFixed(2)+' ر.س'+(e.value.reference.isEmpty?'':' • '+e.value.reference)),trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>setState(()=>payments.removeAt(e.key))))),
-      OutlinedButton.icon(onPressed:()=>addPayment(remaining),icon:const Icon(Icons.payments_outlined),label:Text('إضافة دفعة • المتبقي '+remaining.toStringAsFixed(2)+' ر.س')),
+      const Divider(height:28),Text('إجمالي البيع: '+t.toStringAsFixed(2)+' ﷼',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18)),
+      ...payments.asMap().entries.map((e)=>ListTile(title:Text(e.value.method),subtitle:Text(e.value.amount.toStringAsFixed(2)+' ﷼'+(e.value.reference.isEmpty?'':' • '+e.value.reference)),trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>setState(()=>payments.removeAt(e.key))))),
+      OutlinedButton.icon(onPressed:()=>addPayment(remaining),icon:const Icon(Icons.payments_outlined),label:Text('إضافة دفعة • المتبقي '+remaining.toStringAsFixed(2)+' ﷼')),
       const SizedBox(height:12),FilledButton(onPressed:busy?null:()=>save(items),child:Text(busy?'جاري الحفظ...':'حفظ البيع وخصم المخزون')),
       const SizedBox(height:24),SettlementPanel(membership:widget.membership,repository:widget.repository,sellers:ss.data!),
     ]);
@@ -254,5 +253,5 @@ class _SettlementPanelState extends State<SettlementPanel> {
       }),
     ]);
   }
-  Widget _line(String label, double value, {bool bold = false}) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: TextStyle(fontWeight: bold ? FontWeight.bold : null)), Text('${value.toStringAsFixed(2)} ر.س', style: TextStyle(fontWeight: bold ? FontWeight.bold : null))]));
+  Widget _line(String label, double value, {bool bold = false}) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: TextStyle(fontWeight: bold ? FontWeight.bold : null)), Text('${value.toStringAsFixed(2)} ﷼', style: TextStyle(fontWeight: bold ? FontWeight.bold : null))]));
 }
