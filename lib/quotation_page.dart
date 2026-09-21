@@ -234,7 +234,7 @@ class _QuotationsPageState extends State<QuotationsPage> {
                           onTap: () => _openDocument(quotation),
                           leading: Icon(quotation.status == 'converted' ? Icons.check_circle : Icons.description_outlined),
                           title: Text(quotation.customerName),
-                          subtitle: Text('${_date(quotation.issueDate)} • ${quotation.total.toStringAsFixed(2)} ر.س شامل VAT\nاضغط للعرض والمشاركة'),
+                          subtitle: Text('${_date(quotation.issueDate)} • ${quotation.total.toStringAsFixed(2)} ⃁ شامل VAT\nاضغط للعرض والمشاركة'),
                           trailing: quotation.status == 'draft' && widget.membership.role != InstitutionRole.accountant
                               ? IconButton(
                                   tooltip: 'تحويل إلى بيع',
@@ -426,7 +426,7 @@ class QuotationDocument extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text(label, style: TextStyle(fontWeight: bold ? FontWeight.bold : null)),
-          Text('${amount.toStringAsFixed(2)} ر.س', style: TextStyle(fontWeight: bold ? FontWeight.bold : null)),
+          Text('${amount.toStringAsFixed(2)} ⃁', style: TextStyle(fontWeight: bold ? FontWeight.bold : null)),
         ]),
       );
 }

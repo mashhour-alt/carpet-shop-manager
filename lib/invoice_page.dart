@@ -113,7 +113,7 @@ class _InvoicesPageState extends State<InvoicesPage> {
                         (sale) => DropdownMenuItem(
                           value: sale.id,
                           child: Text(
-                            '${sale.itemName} • ${sale.color} • ${_money(sale.total)} ر.س',
+                            '${sale.itemName} • ${sale.color} • ${_money(sale.total)} ⃁',
                           ),
                         ),
                       )
@@ -155,7 +155,7 @@ class _InvoicesPageState extends State<InvoicesPage> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'الخصم (ر.س)',
+                    labelText: 'الخصم (⃁)',
                     suffixText: 'SAR',
                   ),
                 ),
@@ -283,7 +283,7 @@ class _InvoicesPageState extends State<InvoicesPage> {
                       ),
                       subtitle: Text(
                         '${invoice.customerName} • ${_invoiceDate(invoice.issuedAt)}\n'
-                        '${_money(invoice.totalWithVat)} ر.س شامل الضريبة',
+                        '${_money(invoice.totalWithVat)} ⃁ شامل الضريبة',
                       ),
                       trailing: const Icon(Icons.open_in_new),
                     ),
@@ -780,7 +780,7 @@ class _TotalRow extends StatelessWidget {
               ),
             ),
             Text(
-              '${negative ? '- ' : ''}${_money(amount)} ر.س',
+              '${negative ? '- ' : ''}${_money(amount)} ⃁',
               textDirection: TextDirection.rtl,
               style: TextStyle(
                 fontSize: bold ? 13 : 11,

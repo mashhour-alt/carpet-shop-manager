@@ -31,3 +31,5 @@ void main() {
     expect(salary + commissions - withdrawals - deductions - payments, 1500);
   });
 }
+
+// Account-statement invariants: supplier 10000-4000=6000, seller 4000-1000=3000, driver 750-500=250.

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cloud_models.dart';
+import 'account_statements_page.dart';
+import 'materials_page.dart';
 import 'documents_page.dart';
 import 'farsha_repository.dart';
 import 'operations_pages.dart';
@@ -220,11 +222,13 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
       InstitutionOverview(membership: widget.membership, repository: widget.repository),
       if (manager) MembersPage(membership: widget.membership, repository: widget.repository),
       InstitutionOperationsPage(membership: widget.membership, repository: widget.repository),
+      if (manager) MaterialsPage(membership: widget.membership, repository: widget.repository),
       if (manager) OperatingReportsPage(membership: widget.membership, repository: widget.repository),
+      AccountStatementsPage(membership: widget.membership, repository: widget.repository, personalSeller: !manager),
       DocumentsPage(membership: widget.membership, repository: widget.repository),
       SalesSettlementPage(membership: widget.membership, repository: widget.repository),
     ];
-    final labels = <String>['الرئيسية', if (manager) 'المستخدمون', 'المخزون', if (manager) 'التقارير', 'المستندات', 'البيع'];
+    final labels = <String>['الرئيسية', if (manager) 'المستخدمون', 'المخزون', if (manager) 'المستلزمات', if (manager) 'التقارير', manager ? 'كشف الحساب' : 'حسابي', 'المستندات', 'البيع'];
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.membership.institutionName),
@@ -245,7 +249,10 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
         'الرئيسية' => Icons.home_outlined,
         'المستخدمون' => Icons.people_outline,
         'المخزون' => Icons.inventory_2_outlined,
+        'المستلزمات' => Icons.handyman_outlined,
         'التقارير' => Icons.analytics_outlined,
+        'كشف الحساب' => Icons.account_balance_wallet_outlined,
+        'حسابي' => Icons.account_balance_wallet_outlined,
         'المستندات' => Icons.description_outlined,
         _ => Icons.point_of_sale,
       };
@@ -573,7 +580,7 @@ class _MembersPageState extends State<MembersPage> {
                   else
                     ...tripSnapshot.data!.map((trip) => Card(child: ListTile(
                       leading: Icon(trip.isPaid ? Icons.check_circle : Icons.payments_outlined, color: trip.isPaid ? Colors.green : null),
-                      title: Text('${trip.driverName} • ${trip.amount.toStringAsFixed(2)} ر.س'),
+                      title: Text('${trip.driverName} • ${trip.amount.toStringAsFixed(2)} ⃁'),
                       subtitle: Text('${trip.sellerName} • ${trip.date.toLocal().toString().split(' ').first}\n${trip.isPaid ? (trip.paymentMethod == 'cash' ? 'مدفوع كاش' : 'مدفوع تحويل بنكي') : 'غير مدفوع'}'),
                       trailing: trip.isPaid ? null : TextButton(onPressed: () => _payTrip(trip), child: const Text('دفع')),
                     ))),
@@ -634,8 +641,8 @@ class _DriverHomeState extends State<DriverHome> {
                       child: ListTile(
                         leading: const Icon(Icons.storefront),
                         title: Text(entry.key),
-                        subtitle: Text('المتبقي ${(pending[entry.key] ?? 0).toStringAsFixed(2)} ر.س'),
-                        trailing: Text('الإجمالي\n${entry.value.toStringAsFixed(2)} ر.س', textAlign: TextAlign.center),
+                        subtitle: Text('المتبقي ${(pending[entry.key] ?? 0).toStringAsFixed(2)} ⃁'),
+                        trailing: Text('الإجمالي\n${entry.value.toStringAsFixed(2)} ⃁', textAlign: TextAlign.center),
                       ),
                     )),
                 const Divider(height: 30),
@@ -644,7 +651,7 @@ class _DriverHomeState extends State<DriverHome> {
                         leading: const Icon(Icons.route),
                         title: Text(trip.institutionName),
                         subtitle: Text('${trip.sellerName} • ${trip.date.toLocal().toString().split(' ').first} • ${trip.paymentStatus == 'paid' ? 'مدفوع' : 'غير مدفوع'}'),
-                        trailing: Text('${trip.amount.toStringAsFixed(2)} ر.س'),
+                        trailing: Text('${trip.amount.toStringAsFixed(2)} ⃁'),
                       ),
                     )),
               ],
