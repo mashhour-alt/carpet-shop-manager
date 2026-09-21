@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'cloud_models.dart';
 import 'farsha_repository.dart';
-const sar='﷼';
+const sar='⃁';
 String money(double v)=>sar+' '+v.toStringAsFixed(2);
 class AccountStatementsPage extends StatefulWidget{
  const AccountStatementsPage({super.key,required this.membership,required this.repository,this.personalSeller=false});
