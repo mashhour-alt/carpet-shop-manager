@@ -98,12 +98,13 @@ class DriverTrip {
 }
 
 class SupplierRecord {
-  const SupplierRecord({required this.id, required this.name, required this.phone, required this.purchases, required this.paid});
+  const SupplierRecord({required this.id, required this.name, required this.phone, required this.purchases, required this.paid, this.categories=const ['flooring']});
   final String id;
   final String name;
   final String phone;
   final double purchases;
   final double paid;
+  final List<String> categories;
   double get remaining => purchases - paid;
 
   factory SupplierRecord.fromMap(Map<String, dynamic> map) => SupplierRecord(
@@ -112,6 +113,7 @@ class SupplierRecord {
         phone: map['phone'] as String,
         purchases: (map['purchases_total'] as num).toDouble(),
         paid: (map['paid_total'] as num).toDouble(),
+        categories: List<String>.from(map['categories'] as List? ?? const ['flooring']),
       );
 }
 
@@ -428,11 +430,21 @@ class TaxInvoiceRecord {
 }
 
 class AddonTypeRecord {
-  const AddonTypeRecord({required this.id, required this.name, required this.unit, required this.defaultSalePrice, required this.defaultCostPrice});
-  final String id; final String name; final String unit; final double defaultSalePrice; final double defaultCostPrice;
-  factory AddonTypeRecord.fromMap(Map<String,dynamic> m)=>AddonTypeRecord(
-    id:m['id'] as String,name:m['name'] as String,unit:m['unit'] as String,
-    defaultSalePrice:(m['default_sale_price'] as num).toDouble(),defaultCostPrice:(m['default_cost_price'] as num).toDouble());
+  const AddonTypeRecord({required this.id,required this.name,required this.unit,required this.defaultSalePrice,required this.defaultCostPrice,this.behavior='customer_addon',this.calculationBasis='quantity',this.trackStock=false,this.stockQuantity=0,this.lowStockAt=0,this.customerVisible=true,this.chargeToSeller=false});
+  final String id,name,unit,behavior,calculationBasis; final double defaultSalePrice,defaultCostPrice,stockQuantity,lowStockAt; final bool trackStock,customerVisible,chargeToSeller;
+  bool get isLow=>trackStock&&stockQuantity<=lowStockAt;
+  factory AddonTypeRecord.fromMap(Map<String,dynamic> m)=>AddonTypeRecord(id:m['id'] as String,name:m['name'] as String,unit:m['unit'] as String,defaultSalePrice:(m['default_sale_price'] as num).toDouble(),defaultCostPrice:(m['default_cost_price'] as num).toDouble(),behavior:m['behavior'] as String? ?? 'customer_addon',calculationBasis:m['calculation_basis'] as String? ?? 'quantity',trackStock:m['track_stock'] as bool? ?? false,stockQuantity:(m['stock_quantity'] as num?)?.toDouble()??0,lowStockAt:(m['low_stock_at'] as num?)?.toDouble()??0,customerVisible:m['customer_visible'] as bool? ?? true,chargeToSeller:m['charge_to_seller'] as bool? ?? false);
+}
+
+class AccountSummaryRecord {
+  const AccountSummaryRecord({required this.id,required this.name,required this.count,required this.gross,required this.paid,required this.balance});
+  final String id,name; final int count; final double gross,paid,balance;
+  factory AccountSummaryRecord.fromMap(Map<String,dynamic> m)=>AccountSummaryRecord(id:m['party_id'] as String,name:m['party_name'] as String,count:(m['metric_count'] as num).toInt(),gross:(m['gross'] as num).toDouble(),paid:(m['paid_or_deducted'] as num).toDouble(),balance:(m['balance'] as num).toDouble());
+}
+class AccountMovementRecord {
+  const AccountMovementRecord({required this.time,required this.type,required this.reference,required this.description,required this.amount,required this.createdBy,required this.balance});
+  final DateTime time; final String type,reference,description,createdBy; final double amount,balance;
+  factory AccountMovementRecord.fromMap(Map<String,dynamic> m)=>AccountMovementRecord(time:DateTime.parse(m['event_time'] as String),type:m['event_type'] as String,reference:m['reference'] as String,description:m['description'] as String,amount:(m['amount'] as num).toDouble(),createdBy:m['created_by_name'] as String,balance:(m['running_balance'] as num).toDouble());
 }
 
 class SalePaymentInput {
