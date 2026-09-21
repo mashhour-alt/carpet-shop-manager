@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cloud_models.dart';
+import 'account_statements_page.dart';
 import 'documents_page.dart';
 import 'farsha_repository.dart';
 import 'operations_pages.dart';
@@ -221,10 +222,11 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
       if (manager) MembersPage(membership: widget.membership, repository: widget.repository),
       InstitutionOperationsPage(membership: widget.membership, repository: widget.repository),
       if (manager) OperatingReportsPage(membership: widget.membership, repository: widget.repository),
+      AccountStatementsPage(membership: widget.membership, repository: widget.repository, personalSeller: !manager),
       DocumentsPage(membership: widget.membership, repository: widget.repository),
       SalesSettlementPage(membership: widget.membership, repository: widget.repository),
     ];
-    final labels = <String>['الرئيسية', if (manager) 'المستخدمون', 'المخزون', if (manager) 'التقارير', 'المستندات', 'البيع'];
+    final labels = <String>['الرئيسية', if (manager) 'المستخدمون', 'المخزون', if (manager) 'التقارير', manager ? 'كشف الحساب' : 'حسابي', 'المستندات', 'البيع'];
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.membership.institutionName),
@@ -246,6 +248,8 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
         'المستخدمون' => Icons.people_outline,
         'المخزون' => Icons.inventory_2_outlined,
         'التقارير' => Icons.analytics_outlined,
+        'كشف الحساب' => Icons.account_balance_wallet_outlined,
+        'حسابي' => Icons.account_balance_wallet_outlined,
         'المستندات' => Icons.description_outlined,
         _ => Icons.point_of_sale,
       };
