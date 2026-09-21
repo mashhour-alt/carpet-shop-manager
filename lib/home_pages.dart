@@ -580,7 +580,7 @@ class _MembersPageState extends State<MembersPage> {
                   else
                     ...tripSnapshot.data!.map((trip) => Card(child: ListTile(
                       leading: Icon(trip.isPaid ? Icons.check_circle : Icons.payments_outlined, color: trip.isPaid ? Colors.green : null),
-                      title: Text('${trip.driverName} • ${trip.amount.toStringAsFixed(2)} ر.س'),
+                      title: Text('${trip.driverName} • ${trip.amount.toStringAsFixed(2)} ⃁'),
                       subtitle: Text('${trip.sellerName} • ${trip.date.toLocal().toString().split(' ').first}\n${trip.isPaid ? (trip.paymentMethod == 'cash' ? 'مدفوع كاش' : 'مدفوع تحويل بنكي') : 'غير مدفوع'}'),
                       trailing: trip.isPaid ? null : TextButton(onPressed: () => _payTrip(trip), child: const Text('دفع')),
                     ))),
@@ -641,8 +641,8 @@ class _DriverHomeState extends State<DriverHome> {
                       child: ListTile(
                         leading: const Icon(Icons.storefront),
                         title: Text(entry.key),
-                        subtitle: Text('المتبقي ${(pending[entry.key] ?? 0).toStringAsFixed(2)} ر.س'),
-                        trailing: Text('الإجمالي\n${entry.value.toStringAsFixed(2)} ر.س', textAlign: TextAlign.center),
+                        subtitle: Text('المتبقي ${(pending[entry.key] ?? 0).toStringAsFixed(2)} ⃁'),
+                        trailing: Text('الإجمالي\n${entry.value.toStringAsFixed(2)} ⃁', textAlign: TextAlign.center),
                       ),
                     )),
                 const Divider(height: 30),
@@ -651,7 +651,7 @@ class _DriverHomeState extends State<DriverHome> {
                         leading: const Icon(Icons.route),
                         title: Text(trip.institutionName),
                         subtitle: Text('${trip.sellerName} • ${trip.date.toLocal().toString().split(' ').first} • ${trip.paymentStatus == 'paid' ? 'مدفوع' : 'غير مدفوع'}'),
-                        trailing: Text('${trip.amount.toStringAsFixed(2)} ر.س'),
+                        trailing: Text('${trip.amount.toStringAsFixed(2)} ⃁'),
                       ),
                     )),
               ],
