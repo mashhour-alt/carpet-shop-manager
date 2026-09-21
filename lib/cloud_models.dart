@@ -464,3 +464,9 @@ class OperatingSaleRecord {
     id:m['sale_id'] as String,createdAt:DateTime.parse(m['created_at'] as String),length:(m['length'] as num).toDouble(),area:(m['area'] as num).toDouble(),itemName:m['item_name'] as String,color:m['color'] as String,addons:m['addons'] as String,payments:m['payments'] as String,salesAmount:(m['sales_amount'] as num).toDouble(),sellerName:m['seller_name'] as String,driverName:m['driver_name'] as String,driverCost:(m['driver_cost'] as num).toDouble(),merchandiseCost:(m['merchandise_cost'] as num).toDouble(),addonCost:(m['addon_cost'] as num).toDouble(),paymentFees:(m['payment_fees'] as num).toDouble(),totalCost:(m['total_cost'] as num).toDouble(),grossProfit:(m['gross_profit'] as num).toDouble(),notes:m['notes'] as String,status:m['status'] as String);
 }
 
+
+class SellerPerformanceRecord {
+  const SellerPerformanceRecord({required this.saleCount,required this.totalLength,required this.totalArea,required this.salesAmount,required this.merchandiseCost,required this.grossProfit,required this.commission,required this.ledgerDeductions,required this.netDue});
+  final int saleCount; final double totalLength,totalArea,salesAmount,commission,ledgerDeductions,netDue; final double? merchandiseCost,grossProfit;
+  factory SellerPerformanceRecord.fromMap(Map<String,dynamic> m)=>SellerPerformanceRecord(saleCount:(m['sale_count'] as num).toInt(),totalLength:(m['total_length'] as num).toDouble(),totalArea:(m['total_area'] as num).toDouble(),salesAmount:(m['sales_amount'] as num).toDouble(),merchandiseCost:(m['merchandise_cost'] as num?)?.toDouble(),grossProfit:(m['gross_profit'] as num?)?.toDouble(),commission:(m['commission'] as num).toDouble(),ledgerDeductions:(m['ledger_deductions'] as num).toDouble(),netDue:(m['net_due'] as num).toDouble());
+}
