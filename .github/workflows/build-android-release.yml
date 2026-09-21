@@ -1,6 +1,8 @@
 name: Build Android Release APK
 
 on:
+  push:
+    branches: [excel-operating-cycle]
   release:
     types: [published]
   workflow_dispatch:
