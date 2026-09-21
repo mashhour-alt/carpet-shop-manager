@@ -34,7 +34,7 @@ begin
     if v_qty<=0 or v_sale_unit<0 or v_cost_unit<0 then raise exception 'Invalid add-on values'; end if;
     v_addon_sales:=v_addon_sales+round(v_qty*v_sale_unit,2);
   end loop;
-  v_total:=round(v_carpet_total+v_addon_sales+p_driver_fee,2);
+  v_total:=round(v_carpet_total+v_addon_sales,2);
   if jsonb_typeof(coalesce(p_payments,'[]'::jsonb))<>'array' or jsonb_array_length(coalesce(p_payments,'[]'::jsonb))=0 then raise exception 'At least one payment is required'; end if;
   for payment in select value from jsonb_array_elements(p_payments) loop
     v_method:=coalesce(nullif(trim(payment->>'method'),''),'other');
