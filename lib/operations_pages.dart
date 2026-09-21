@@ -201,13 +201,13 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
       const SizedBox(height:8),Row(children:[Expanded(child:TextField(controller:length,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'الطول م'))),const SizedBox(width:8),Expanded(child:TextField(controller:price,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع/م²')))]),
       Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text('المساحة: '+(n(length)*4).toStringAsFixed(2)+' م² • العرض 4 م')),
       OutlinedButton.icon(onPressed:()=>addAddon(customerAddons),icon:const Icon(Icons.add),label:const Text('إضافة تركيب / لباد / حديد')),
-      ...addons.asMap().entries.map((e)=>ListTile(title:Text(e.value.name+' × '+e.value.quantity.toStringAsFixed(2)),subtitle:Text((e.value.saleTotal).toStringAsFixed(2)+' ﷼'),trailing:IconButton(icon:const Icon(Icons.delete_outline),onPressed:()=>setState(()=>addons.removeAt(e.key))))),
+      ...addons.asMap().entries.map((e)=>ListTile(title:Text(e.value.name+' × '+e.value.quantity.toStringAsFixed(2)),subtitle:Text((e.value.saleTotal).toStringAsFixed(2)+' ⃁'),trailing:IconButton(icon:const Icon(Icons.delete_outline),onPressed:()=>setState(()=>addons.removeAt(e.key))))),
       const SizedBox(height:8),DropdownButtonFormField<String?>(initialValue:driverId,decoration:const InputDecoration(labelText:'السائق (اختياري)'),items:[const DropdownMenuItem<String?>(value:null,child:Text('بدون سائق')),...dd.data!.map((x)=>DropdownMenuItem<String?>(value:x.id,child:Text(x.name)))],onChanged:(v)=>setState(()=>driverId=v)),
       const SizedBox(height:8),TextField(controller:driverFee,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'تكلفة السائق')),
       const SizedBox(height:8),TextField(controller:notes,maxLines:2,decoration:const InputDecoration(labelText:'ملاحظات')),
-      const Divider(height:28),Text('إجمالي البيع: '+t.toStringAsFixed(2)+' ﷼',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18)),
-      ...payments.asMap().entries.map((e)=>ListTile(title:Text(e.value.method),subtitle:Text(e.value.amount.toStringAsFixed(2)+' ﷼'+(e.value.reference.isEmpty?'':' • '+e.value.reference)),trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>setState(()=>payments.removeAt(e.key))))),
-      OutlinedButton.icon(onPressed:()=>addPayment(remaining),icon:const Icon(Icons.payments_outlined),label:Text('إضافة دفعة • المتبقي '+remaining.toStringAsFixed(2)+' ﷼')),
+      const Divider(height:28),Text('إجمالي البيع: '+t.toStringAsFixed(2)+' ⃁',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18)),
+      ...payments.asMap().entries.map((e)=>ListTile(title:Text(e.value.method),subtitle:Text(e.value.amount.toStringAsFixed(2)+' ⃁'+(e.value.reference.isEmpty?'':' • '+e.value.reference)),trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>setState(()=>payments.removeAt(e.key))))),
+      OutlinedButton.icon(onPressed:()=>addPayment(remaining),icon:const Icon(Icons.payments_outlined),label:Text('إضافة دفعة • المتبقي '+remaining.toStringAsFixed(2)+' ⃁')),
       const SizedBox(height:12),FilledButton(onPressed:busy?null:()=>save(items),child:Text(busy?'جاري الحفظ...':'حفظ البيع وخصم المخزون')),
       const SizedBox(height:24),SettlementPanel(membership:widget.membership,repository:widget.repository,sellers:ss.data!),
     ]);
@@ -253,5 +253,5 @@ class _SettlementPanelState extends State<SettlementPanel> {
       }),
     ]);
   }
-  Widget _line(String label, double value, {bool bold = false}) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: TextStyle(fontWeight: bold ? FontWeight.bold : null)), Text('${value.toStringAsFixed(2)} ﷼', style: TextStyle(fontWeight: bold ? FontWeight.bold : null))]));
+  Widget _line(String label, double value, {bool bold = false}) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: TextStyle(fontWeight: bold ? FontWeight.bold : null)), Text('${value.toStringAsFixed(2)} ⃁', style: TextStyle(fontWeight: bold ? FontWeight.bold : null))]));
 }
