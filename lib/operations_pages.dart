@@ -179,7 +179,7 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
       const SizedBox(height:12),FilledButton(onPressed:busy?null:()=>save(items),child:Text(busy?'جاري الحفظ...':'حفظ البيع وخصم المخزون')),
       const SizedBox(height:24),SettlementPanel(membership:widget.membership,repository:widget.repository,sellers:ss.data!),
     ]);
-  })))));
+  }))));
 }
 
 class SettlementPanel extends StatefulWidget {
