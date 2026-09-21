@@ -111,77 +111,75 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
 }
 
 class SalesSettlementPage extends StatefulWidget {
-  const SalesSettlementPage({super.key, required this.membership, required this.repository});
-  final InstitutionMembership membership;
-  final FarshaRepository repository;
-  @override
-  State<SalesSettlementPage> createState() => _SalesSettlementPageState();
+  const SalesSettlementPage({super.key,required this.membership,required this.repository});
+  final InstitutionMembership membership; final FarshaRepository repository;
+  @override State<SalesSettlementPage> createState()=>_SalesSettlementPageState();
 }
-
 class _SalesSettlementPageState extends State<SalesSettlementPage> {
-  late final Future<List<SupplierRecord>> _suppliers = widget.repository.loadSuppliers(widget.membership.institutionId);
-  late Future<List<InventoryRecord>> _inventory = widget.repository.loadInventory(widget.membership.institutionId);
-  late final Future<List<PersonOption>> _sellers = widget.repository.loadSellers(widget.membership.institutionId);
-  late final Future<List<PersonOption>> _drivers = widget.repository.loadDriverOptions(widget.membership.institutionId);
-  final _customer = TextEditingController(); final _length = TextEditingController(); final _price = TextEditingController();
-  final _installation = TextEditingController(text: '0'); final _glueQty = TextEditingController(text: '0'); final _glueAmount = TextEditingController(text: '0');
-  final _ironQty = TextEditingController(text: '0'); final _ironAmount = TextEditingController(text: '0'); final _driverFee = TextEditingController(text: '0');
-  String? _inventoryId; String? _sellerId; String? _driverId; String? _glueSupplierId; String? _ironSupplierId; String _payment = 'cash'; bool _busy = false;
-
-  @override void dispose() { for (final c in [_customer,_length,_price,_installation,_glueQty,_glueAmount,_ironQty,_ironAmount,_driverFee]) { c.dispose(); } super.dispose(); }
-
-  Future<void> _save(List<InventoryRecord> inventory) async {
-    final seller = widget.membership.role == InstitutionRole.seller ? widget.repository.userId : _sellerId;
-    InventoryRecord? item;
-    for (final candidate in inventory) {
-      if (candidate.id == _inventoryId) item = candidate;
-    }
-    if (item == null || seller == null || _number(_length) <= 0 || _number(_length) > item.remainingLength || _number(_price) < 0) return _message('راجع القطعة والطول والسعر');
-    if (_number(_glueQty) > 0 && _glueSupplierId == null) return _message('اختر مورد الغراء');
-    if (_number(_ironQty) > 0 && _ironSupplierId == null) return _message('اختر مورد الحديد');
-    setState(() => _busy = true);
-    try {
-      await widget.repository.recordSale(institutionId: widget.membership.institutionId, inventoryId: item.id, sellerId: seller, driverId: _driverId, customerName: _customer.text, length: _number(_length), salePrice: _number(_price), installation: _number(_installation), glueSupplierId: _glueSupplierId, glueGallons: _number(_glueQty), glueAmount: _number(_glueAmount), ironSupplierId: _ironSupplierId, ironPieces: _number(_ironQty), ironAmount: _number(_ironAmount), driverFee: _number(_driverFee), paymentMethod: _payment);
-      _message('تم حفظ البيع وخصم الطول من المخزون');
-      setState(() { _inventory = widget.repository.loadInventory(widget.membership.institutionId); _length.clear(); _price.clear(); });
-    } catch (error) { _message('$error'); } finally { if (mounted) setState(() => _busy = false); }
+  late Future<List<InventoryRecord>> inventory=widget.repository.loadInventory(widget.membership.institutionId);
+  late final Future<List<PersonOption>> sellers=widget.repository.loadSellers(widget.membership.institutionId);
+  late final Future<List<PersonOption>> drivers=widget.repository.loadDriverOptions(widget.membership.institutionId);
+  late final Future<List<AddonTypeRecord>> addonTypes=widget.repository.loadAddonTypes(widget.membership.institutionId);
+  final customer=TextEditingController(),length=TextEditingController(),price=TextEditingController(),driverFee=TextEditingController(text:'0'),notes=TextEditingController();
+  String? inventoryId,sellerId,driverId; bool busy=false;
+  final List<SaleAddonInput> addons=[]; final List<SalePaymentInput> payments=[];
+  @override void dispose(){for(final x in[customer,length,price,driverFee,notes])x.dispose();super.dispose();}
+  double n(TextEditingController c)=>double.tryParse(c.text.trim())??0;
+  void msg(String x)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(x)));
+  double get addonSales=>addons.fold(0,(a,b)=>a+b.saleTotal);
+  double total(List<InventoryRecord> items){final item=items.where((e)=>e.id==inventoryId).firstOrNull;if(item==null)return 0;return n(length)*4*n(price)+addonSales+n(driverFee);}
+  Future<void> addPayment(double due) async {
+    var method='cash';final amount=TextEditingController(text:due>0?due.toStringAsFixed(2):'');final ref=TextEditingController();
+    final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setD)=>AlertDialog(title:const Text('إضافة دفعة'),content:Column(mainAxisSize:MainAxisSize.min,children:[
+      DropdownButtonFormField<String>(initialValue:method,decoration:const InputDecoration(labelText:'الطريقة'),items:const [
+        DropdownMenuItem(value:'cash',child:Text('كاش')),DropdownMenuItem(value:'network',child:Text('شبكة')),DropdownMenuItem(value:'bank_transfer',child:Text('تحويل بنكي')),DropdownMenuItem(value:'visa',child:Text('Visa')),DropdownMenuItem(value:'tamara',child:Text('تمارا')),DropdownMenuItem(value:'tabby',child:Text('تابي')),DropdownMenuItem(value:'other',child:Text('أخرى'))],onChanged:(v)=>setD(()=>method=v!)),
+      const SizedBox(height:8),TextField(controller:amount,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'المبلغ')),const SizedBox(height:8),TextField(controller:ref,decoration:const InputDecoration(labelText:'مرجع العملية (اختياري)'))]),
+      actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('إضافة'))])));
+    final a=n(amount),r=ref.text.trim();amount.dispose();ref.dispose();if(ok==true&&a>0)setState(()=>payments.add(SalePaymentInput(method:method,amount:a,reference:r)));
   }
-
-  void _message(String text) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-
-  @override
-  Widget build(BuildContext context) => FutureBuilder<List<SupplierRecord>>(future: _suppliers, builder: (context, supplierSnap) => FutureBuilder<List<InventoryRecord>>(future: _inventory, builder: (context, invSnap) => FutureBuilder<List<PersonOption>>(future: _sellers, builder: (context, sellerSnap) => FutureBuilder<List<PersonOption>>(future: _drivers, builder: (context, driverSnap) {
-    if (!supplierSnap.hasData || !invSnap.hasData || !sellerSnap.hasData || !driverSnap.hasData) return const Center(child: CircularProgressIndicator());
-    final suppliers = supplierSnap.data!; final inventory = invSnap.data!; final sellers = sellerSnap.data!; final drivers = driverSnap.data!;
-    if (widget.membership.role == InstitutionRole.accountant) {
-      return ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('المحاسب يراجع الحسابات والتصفية، وتسجيل البيع للبائع أو صاحب المؤسسة.'))),
-          const SizedBox(height: 16),
-          SettlementPanel(membership: widget.membership, repository: widget.repository, sellers: sellers),
-        ],
-      );
-    }
-    return ListView(padding: const EdgeInsets.all(16), children: [
-      const Text('بيعة جديدة', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)), const SizedBox(height: 12),
-      DropdownButtonFormField<String>(initialValue: _inventoryId, decoration: const InputDecoration(labelText: 'القطعة واللون'), items: inventory.where((i) => i.remainingLength > 0).map((i) => DropdownMenuItem(value: i.id, child: Text('${i.name} • ${i.color} (${i.remainingLength.toStringAsFixed(1)} م)'))).toList(), onChanged: (v) => setState(() => _inventoryId = v)),
-      if (widget.membership.role != InstitutionRole.seller) ...[const SizedBox(height: 10), DropdownButtonFormField<String>(initialValue: _sellerId, decoration: const InputDecoration(labelText: 'البائع'), items: sellers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(), onChanged: (v) => setState(() => _sellerId = v))],
-      const SizedBox(height: 10), TextField(controller: _customer, decoration: const InputDecoration(labelText: 'اسم العميل (اختياري)')),
-      const SizedBox(height: 10), Row(children: [Expanded(child: TextField(controller: _length, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الطول م'))), const SizedBox(width: 8), Expanded(child: TextField(controller: _price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'سعر البيع/م²')))]),
-      const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('العرض ثابت 4 م والمساحة = الطول × 4')),
-      Row(children: [Expanded(child: TextField(controller: _installation, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'التركيب'))), const SizedBox(width: 8), Expanded(child: TextField(controller: _glueQty, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'جالون غراء')))]),
-      const SizedBox(height: 10), DropdownButtonFormField<String>(initialValue: _glueSupplierId, decoration: const InputDecoration(labelText: 'مورد الغراء'), items: suppliers.map((supplier) => DropdownMenuItem(value: supplier.id, child: Text(supplier.name))).toList(), onChanged: (value) => setState(() => _glueSupplierId = value)),
-      const SizedBox(height: 10), Row(children: [Expanded(child: TextField(controller: _glueAmount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'قيمة الغراء'))), const SizedBox(width: 8), Expanded(child: TextField(controller: _ironQty, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'قطع حديد')))]),
-      const SizedBox(height: 10), DropdownButtonFormField<String>(initialValue: _ironSupplierId, decoration: const InputDecoration(labelText: 'مورد الحديد'), items: suppliers.map((supplier) => DropdownMenuItem(value: supplier.id, child: Text(supplier.name))).toList(), onChanged: (value) => setState(() => _ironSupplierId = value)),
-      const SizedBox(height: 10), TextField(controller: _ironAmount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'قيمة الحديد')),
-      const SizedBox(height: 10), DropdownButtonFormField<String?>(initialValue: _driverId, decoration: const InputDecoration(labelText: 'السائق (اختياري)'), items: [const DropdownMenuItem<String?>(value: null, child: Text('بدون سائق')), ...drivers.map((d) => DropdownMenuItem<String?>(value: d.id, child: Text(d.name)))], onChanged: (v) => setState(() => _driverId = v)),
-      const SizedBox(height: 10), TextField(controller: _driverFee, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'حساب المشوار')),
-      const SizedBox(height: 10), DropdownButtonFormField<String>(initialValue: _payment, decoration: const InputDecoration(labelText: 'طريقة دفع العميل'), items: const [DropdownMenuItem(value: 'cash', child: Text('كاش')), DropdownMenuItem(value: 'network', child: Text('شبكة')), DropdownMenuItem(value: 'visa', child: Text('Visa')), DropdownMenuItem(value: 'tabby', child: Text('Tabby')), DropdownMenuItem(value: 'tamara', child: Text('Tamara'))], onChanged: (v) => setState(() => _payment = v!)),
-      const SizedBox(height: 16), FilledButton(onPressed: _busy ? null : () => _save(inventory), child: Text(_busy ? 'جاري الحفظ...' : 'حفظ البيع وخصم المخزون')),
-      const SizedBox(height: 24), SettlementPanel(membership: widget.membership, repository: widget.repository, sellers: sellers),
+  Future<void> addAddon(List<AddonTypeRecord> types) async {
+    if(types.isEmpty)return msg('أضف أنواع الإضافات من إعدادات المؤسسة');
+    AddonTypeRecord type=types.first;final qty=TextEditingController(text:'1'),sale=TextEditingController(text:type.defaultSalePrice.toStringAsFixed(2));
+    final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setD)=>AlertDialog(title:const Text('إضافة للبيعة'),content:Column(mainAxisSize:MainAxisSize.min,children:[
+      DropdownButtonFormField<String>(initialValue:type.id,decoration:const InputDecoration(labelText:'الإضافة'),items:types.map((x)=>DropdownMenuItem(value:x.id,child:Text(x.name))).toList(),onChanged:(v){setD((){type=types.firstWhere((x)=>x.id==v);sale.text=type.defaultSalePrice.toStringAsFixed(2);});}),
+      const SizedBox(height:8),TextField(controller:qty,keyboardType:TextInputType.number,decoration:InputDecoration(labelText:'الكمية ('+type.unit+')')),const SizedBox(height:8),TextField(controller:sale,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع للوحدة'))]),
+      actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('إضافة'))])));
+    final q=n(qty),sp=n(sale);qty.dispose();sale.dispose();if(ok==true&&q>0&&sp>=0)setState(()=>addons.add(SaleAddonInput(addonTypeId:type.id,name:type.name,unit:type.unit,quantity:q,saleUnitPrice:sp,costUnitPrice:type.defaultCostPrice)));
+  }
+  Future<void> save(List<InventoryRecord> items) async {
+    final seller=widget.membership.role==InstitutionRole.seller?widget.repository.userId:sellerId;
+    final item=items.where((e)=>e.id==inventoryId).firstOrNull;
+    if(item==null||seller==null||n(length)<=0||n(length)>item.remainingLength||n(price)<0)return msg('راجع القطعة والطول والسعر');
+    final t=total(items),paid=payments.fold<double>(0,(a,b)=>a+b.amount);
+    if((paid-t).abs()>.009)return msg('إجمالي الدفعات '+paid.toStringAsFixed(2)+' لا يساوي إجمالي البيع '+t.toStringAsFixed(2));
+    setState(()=>busy=true);
+    try{await widget.repository.recordSaleV2(institutionId:widget.membership.institutionId,inventoryId:item.id,sellerId:seller,driverId:driverId,customerName:customer.text,length:n(length),salePrice:n(price),driverFee:n(driverFee),notes:notes.text,payments:payments,addons:addons);
+      msg('تم حفظ البيع والدفعات وخصم المخزون');setState((){inventory=widget.repository.loadInventory(widget.membership.institutionId);length.clear();price.clear();notes.clear();payments.clear();addons.clear();});
+    }catch(e){msg(e.toString());}finally{if(mounted)setState(()=>busy=false);}
+  }
+  @override Widget build(BuildContext context)=>FutureBuilder<List<InventoryRecord>>(future:inventory,builder:(c,iv)=>FutureBuilder<List<PersonOption>>(future:sellers,builder:(c,ss)=>FutureBuilder<List<PersonOption>>(future:drivers,builder:(c,dd)=>FutureBuilder<List<AddonTypeRecord>>(future:addonTypes,builder:(c,aa){
+    if(!iv.hasData||!ss.hasData||!dd.hasData||!aa.hasData)return const Center(child:CircularProgressIndicator());
+    if(widget.membership.role==InstitutionRole.accountant)return ListView(padding:const EdgeInsets.all(16),children:[SettlementPanel(membership:widget.membership,repository:widget.repository,sellers:ss.data!)]);
+    final items=iv.data!,t=total(items),paid=payments.fold<double>(0,(a,b)=>a+b.amount),remaining=t-paid;
+    return ListView(padding:const EdgeInsets.all(16),children:[
+      const Text('بيعة جديدة',style:TextStyle(fontSize:20,fontWeight:FontWeight.bold)),const SizedBox(height:10),
+      DropdownButtonFormField<String>(initialValue:inventoryId,decoration:const InputDecoration(labelText:'الصنف واللون'),items:items.where((x)=>x.remainingLength>0).map((x)=>DropdownMenuItem(value:x.id,child:Text(x.name+' • '+x.color+' ('+x.remainingLength.toStringAsFixed(1)+' م)'))).toList(),onChanged:(v)=>setState(()=>inventoryId=v)),
+      if(widget.membership.role!=InstitutionRole.seller)...[const SizedBox(height:8),DropdownButtonFormField<String>(initialValue:sellerId,decoration:const InputDecoration(labelText:'البائع'),items:ss.data!.map((x)=>DropdownMenuItem(value:x.id,child:Text(x.name))).toList(),onChanged:(v)=>setState(()=>sellerId=v))],
+      const SizedBox(height:8),TextField(controller:customer,decoration:const InputDecoration(labelText:'العميل (اختياري)')),
+      const SizedBox(height:8),Row(children:[Expanded(child:TextField(controller:length,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'الطول م'))),const SizedBox(width:8),Expanded(child:TextField(controller:price,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع/م²')))]),
+      Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text('المساحة: '+(n(length)*4).toStringAsFixed(2)+' م² • العرض 4 م')),
+      OutlinedButton.icon(onPressed:()=>addAddon(aa.data!),icon:const Icon(Icons.add),label:const Text('إضافة تركيب / لباد / حديد / غراء')),
+      ...addons.asMap().entries.map((e)=>ListTile(title:Text(e.value.name+' × '+e.value.quantity.toStringAsFixed(2)),subtitle:Text((e.value.saleTotal).toStringAsFixed(2)+' ر.س'),trailing:IconButton(icon:const Icon(Icons.delete_outline),onPressed:()=>setState(()=>addons.removeAt(e.key))))),
+      const SizedBox(height:8),DropdownButtonFormField<String?>(initialValue:driverId,decoration:const InputDecoration(labelText:'السائق (اختياري)'),items:[const DropdownMenuItem<String?>(value:null,child:Text('بدون سائق')),...dd.data!.map((x)=>DropdownMenuItem<String?>(value:x.id,child:Text(x.name)))],onChanged:(v)=>setState(()=>driverId=v)),
+      const SizedBox(height:8),TextField(controller:driverFee,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'تكلفة السائق')),
+      const SizedBox(height:8),TextField(controller:notes,maxLines:2,decoration:const InputDecoration(labelText:'ملاحظات')),
+      const Divider(height:28),Text('إجمالي البيع: '+t.toStringAsFixed(2)+' ر.س',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18)),
+      ...payments.asMap().entries.map((e)=>ListTile(title:Text(e.value.method),subtitle:Text(e.value.amount.toStringAsFixed(2)+' ر.س'+(e.value.reference.isEmpty?'':' • '+e.value.reference)),trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>setState(()=>payments.removeAt(e.key))))),
+      OutlinedButton.icon(onPressed:()=>addPayment(remaining),icon:const Icon(Icons.payments_outlined),label:Text('إضافة دفعة • المتبقي '+remaining.toStringAsFixed(2)+' ر.س')),
+      const SizedBox(height:12),FilledButton(onPressed:busy?null:()=>save(items),child:Text(busy?'جاري الحفظ...':'حفظ البيع وخصم المخزون')),
+      const SizedBox(height:24),SettlementPanel(membership:widget.membership,repository:widget.repository,sellers:ss.data!),
     ]);
-  }))));
+  })))));
 }
 
 class SettlementPanel extends StatefulWidget {
