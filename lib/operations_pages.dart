@@ -72,6 +72,21 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
     _reload();
   }
 
+  Future<void> _addDelivery(SupplierRecord supplier,List<InventoryRecord> inventory) async {
+    if(inventory.isEmpty)return _show('أضف صنفًا للمخزون أولًا');
+    var inventoryId=inventory.first.id;final length=TextEditingController(),cost=TextEditingController(),wholesale=TextEditingController(),reference=TextEditingController(),notes=TextEditingController();
+    final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setD)=>AlertDialog(title:Text('توريد من '+supplier.name),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      DropdownButtonFormField<String>(initialValue:inventoryId,decoration:const InputDecoration(labelText:'الصنف'),items:inventory.map((x)=>DropdownMenuItem(value:x.id,child:Text(x.name+' • '+x.color))).toList(),onChanged:(v)=>setD(()=>inventoryId=v!)),
+      const SizedBox(height:8),TextField(controller:length,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'الطول بالمتر')),
+      const SizedBox(height:8),TextField(controller:cost,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر الشراء / م²')),
+      const SizedBox(height:8),TextField(controller:wholesale,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر الجملة للبائع / م²')),
+      const SizedBox(height:8),TextField(controller:reference,decoration:const InputDecoration(labelText:'رقم/مرجع التوريد')),const SizedBox(height:8),TextField(controller:notes,decoration:const InputDecoration(labelText:'ملاحظات'))])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('حفظ التوريد'))])));
+    final l=_number(length),co=_number(cost),w=_number(wholesale),ref=reference.text,note=notes.text;for(final x in[length,cost,wholesale,reference,notes])x.dispose();
+    if(ok!=true||l<=0||co<0||w<co)return;
+    await widget.repository.recordSupplierDelivery(institutionId:widget.membership.institutionId,supplierId:supplier.id,inventoryId:inventoryId,length:l,unitCost:co,wholesalePrice:w,reference:ref,notes:note);_reload();_show('تم تسجيل التوريد وتحديث المخزون وحساب المورد');
+  }
+
   Future<void> _paySupplier(SupplierRecord supplier) async {
     final amount = TextEditingController();
     final save = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
@@ -102,7 +117,7 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
           ...inventory.map((item) => Card(color: item.isLow ? Colors.orange.shade50 : null, child: ListTile(leading: Icon(item.isLow ? Icons.warning_amber : Icons.inventory_2_outlined), title: Text('${item.name} • ${item.color}'), subtitle: Text('المتبقي ${item.remainingLength.toStringAsFixed(2)} م • عرض 4 م'), trailing: Text('${item.wholesalePrice.toStringAsFixed(2)} ر.س/م²')))),
           if (canManage) ...[
             const SizedBox(height: 20), const Text('الموردون', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            ...suppliers.map((s) => Card(child: ListTile(onTap: () => _paySupplier(s), title: Text(s.name), subtitle: Text('${s.phone}\nمشتريات ${s.purchases.toStringAsFixed(2)} • مدفوع ${s.paid.toStringAsFixed(2)}\nاضغط لتسجيل دفعة'), trailing: Text('متبقي\n${s.remaining.toStringAsFixed(2)}', textAlign: TextAlign.center)))),
+            ...suppliers.map((s) => Card(child: ListTile(title: Text(s.name), subtitle: Text('${s.phone}\nمشتريات ${s.purchases.toStringAsFixed(2)} • مدفوع ${s.paid.toStringAsFixed(2)}'), trailing: PopupMenuButton<String>(onSelected:(v){if(v=='pay')_paySupplier(s);else _addDelivery(s,inventory);},itemBuilder:(_)=>const [PopupMenuItem(value:'delivery',child:Text('تسجيل توريد')),PopupMenuItem(value:'pay',child:Text('تسجيل دفعة'))])))),
           ],
         ]);
       },
