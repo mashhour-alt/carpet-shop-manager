@@ -349,6 +349,9 @@ class TaxInvoiceRecord {
     required this.ironAmount,
     required this.driverFee,
     required this.paymentMethod,
+    required this.paymentSummary,
+    required this.addonsSummary,
+    required this.addonsAmount,
     required this.subtotal,
     required this.discountAmount,
     required this.taxableAmount,
@@ -379,6 +382,9 @@ class TaxInvoiceRecord {
   final double ironAmount;
   final double driverFee;
   final String paymentMethod;
+  final String paymentSummary;
+  final String addonsSummary;
+  final double addonsAmount;
   final double subtotal;
   final double discountAmount;
   final double taxableAmount;
@@ -409,6 +415,9 @@ class TaxInvoiceRecord {
         ironAmount: (map['iron_amount'] as num).toDouble(),
         driverFee: (map['driver_fee'] as num).toDouble(),
         paymentMethod: map['payment_method'] as String,
+        paymentSummary: map['payment_summary'] as String? ?? '',
+        addonsSummary: map['addons_summary'] as String? ?? '',
+        addonsAmount: (map['addons_amount'] as num?)?.toDouble() ?? 0,
         subtotal: (map['subtotal'] as num).toDouble(),
         discountAmount: (map['discount_amount'] as num).toDouble(),
         taxableAmount: (map['taxable_amount'] as num).toDouble(),
