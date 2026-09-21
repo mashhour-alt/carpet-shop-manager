@@ -299,6 +299,37 @@ class InstitutionOverview extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 22),
+              if (membership.role != InstitutionRole.seller)
+                FutureBuilder<OperatingSummary>(
+                  future: repository.loadOperatingSummary(
+                    membership.institutionId,
+                    DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),
+                    DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day).add(const Duration(days: 1)),
+                  ),
+                  builder: (context, daily) {
+                    if (!daily.hasData) return const LinearProgressIndicator();
+                    final x=daily.data!;
+                    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children:[
+                      const Text('ملخص اليوم',style:TextStyle(fontSize:20,fontWeight:FontWeight.bold)),
+                      const SizedBox(height:8),
+                      Wrap(spacing:8,runSpacing:8,children:[
+                        MetricCard(title:'المبيعات',value:x.salesAmount.toStringAsFixed(2)),
+                        MetricCard(title:'الأمتار',value:x.totalLength.toStringAsFixed(2)),
+                        MetricCard(title:'م²',value:x.totalArea.toStringAsFixed(2)),
+                        MetricCard(title:'العمليات',value:x.saleCount.toString()),
+                        MetricCard(title:'تكلفة البضاعة',value:x.merchandiseCost.toStringAsFixed(2)),
+                        MetricCard(title:'السائقين',value:x.driverCost.toStringAsFixed(2)),
+                        MetricCard(title:'الربح',value:x.grossProfit.toStringAsFixed(2)),
+                        MetricCard(title:'الكاش',value:(x.payments['cash']??0).toStringAsFixed(2)),
+                        MetricCard(title:'الشبكة',value:(x.payments['network']??0).toStringAsFixed(2)),
+                        MetricCard(title:'التحويل',value:(x.payments['bank_transfer']??0).toStringAsFixed(2)),
+                        MetricCard(title:'تمارا',value:(x.payments['tamara']??0).toStringAsFixed(2)),
+                        MetricCard(title:'تابي',value:(x.payments['tabby']??0).toStringAsFixed(2)),
+                      ]),
+                      const SizedBox(height:18),
+                    ]);
+                  },
+                ),
               if (membership.role != InstitutionRole.seller) ...[
                 OutlinedButton.icon(onPressed: () => _editFees(context), icon: const Icon(Icons.percent), label: const Text('رسوم Visa / Tabby / Tamara')),
                 const SizedBox(height: 12),
