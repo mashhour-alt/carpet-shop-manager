@@ -400,4 +400,12 @@ class FarshaRepository {
     return List<Map<String,dynamic>>.from(rows);
   }
 
+  Future<void> recordSupplierDelivery({required String institutionId,required String supplierId,required String inventoryId,required double length,required double unitCost,required double wholesalePrice,String reference='',String notes=''}) async {
+    await client.rpc('record_supplier_delivery',params:{'p_institution_id':institutionId,'p_supplier_id':supplierId,'p_inventory_id':inventoryId,'p_length':length,'p_unit_cost':unitCost,'p_wholesale_price':wholesalePrice,'p_reference':reference.trim(),'p_notes':notes.trim()});
+  }
+  Future<List<Map<String,dynamic>>> loadSupplierDeliveries(String institutionId,String supplierId) async {
+    final rows=await client.from('supplier_deliveries').select('id,reference,notes,delivered_at,supplier_delivery_items(name_snapshot,color_snapshot,length,unit_cost,wholesale_price)').eq('institution_id',institutionId).eq('supplier_id',supplierId).order('delivered_at',ascending:false);
+    return List<Map<String,dynamic>>.from(rows);
+  }
+
 }
