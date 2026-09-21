@@ -27,6 +27,7 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
 
   Future<void> _addAddonType(List<SupplierRecord> suppliers) async {
     final name=TextEditingController(),unit=TextEditingController(text:'piece'),sale=TextEditingController(text:'0'),cost=TextEditingController(text:'0');String? supplierId;
+    if(type.calculationBasis=='sale_area'){qty.text=(n(length)*4).toStringAsFixed(2);}
     final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setD)=>AlertDialog(title:const Text('نوع إضافة'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
       TextField(controller:name,decoration:const InputDecoration(labelText:'الاسم')),const SizedBox(height:8),TextField(controller:unit,decoration:const InputDecoration(labelText:'الوحدة: piece / sqm / gallon / job')),
       const SizedBox(height:8),TextField(controller:sale,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع الافتراضي')),const SizedBox(height:8),TextField(controller:cost,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'التكلفة على المؤسسة')),
@@ -39,13 +40,16 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
   Future<void> _addSupplier() async {
     final name = TextEditingController();
     final phone = TextEditingController(text: '+966');
+    bool flooring=true,materials=false;
     final save = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
       title: const Text('مورد جديد'),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
+      content: StatefulBuilder(builder:(context,setD)=>Column(mainAxisSize: MainAxisSize.min, children: [
         TextField(controller: name, decoration: const InputDecoration(labelText: 'الاسم')),
         const SizedBox(height: 10),
         TextField(controller: phone, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'رقم الهاتف')),
-      ]),
+        CheckboxListTile(value:flooring,onChanged:(v)=>setD(()=>flooring=v??false),title:const Text('موكيت وأرضيات'),contentPadding:EdgeInsets.zero),
+        CheckboxListTile(value:materials,onChanged:(v)=>setD(()=>materials=v??false),title:const Text('مستلزمات تركيب'),contentPadding:EdgeInsets.zero),
+      ])),
       actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ'))],
     ));
     final supplierName = name.text.trim();
@@ -53,6 +57,9 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
     name.dispose(); phone.dispose();
     if (save != true || supplierName.isEmpty) return;
     await widget.repository.addSupplier(widget.membership.institutionId, supplierName, supplierPhone);
+    final refreshed=await widget.repository.loadSuppliers(widget.membership.institutionId);
+    final created=refreshed.where((x)=>x.name==supplierName).firstOrNull;
+    if(created!=null)await widget.repository.updateSupplierCategories(widget.membership.institutionId,created.id,[if(flooring)'flooring',if(materials)'materials']);
     _reload();
   }
 
@@ -125,7 +132,7 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
           if (canManage) Wrap(spacing:8,runSpacing:8,children:[FilledButton.icon(onPressed:_addSupplier,icon:const Icon(Icons.person_add_alt_1),label:const Text('مورد')),FilledButton.icon(onPressed:()=>_addInventory(suppliers),icon:const Icon(Icons.add_box_outlined),label:const Text('مخزون')),OutlinedButton.icon(onPressed:()=>_addAddonType(suppliers),icon:const Icon(Icons.extension_outlined),label:const Text('إضافة'))]),
           const SizedBox(height: 16), const Text('المخزون', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           if (inventory.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('لا يوجد مخزون.'))),
-          ...inventory.map((item) => Card(color: item.isLow ? Colors.orange.shade50 : null, child: ListTile(leading: Icon(item.isLow ? Icons.warning_amber : Icons.inventory_2_outlined), title: Text('${item.name} • ${item.color}'), subtitle: Text('المتبقي ${item.remainingLength.toStringAsFixed(2)} م • عرض 4 م'), trailing: Text('${item.wholesalePrice.toStringAsFixed(2)} ر.س/م²')))),
+          ...inventory.map((e)=>e.name).toSet().map((name){final colors=inventory.where((x)=>x.name==name).toList();final low=colors.where((x)=>x.isLow).length;return Card(child:ExpansionTile(leading:Icon(low>0?Icons.warning_amber:Icons.inventory_2_outlined),title:Text(name,style:const TextStyle(fontWeight:FontWeight.bold)),subtitle:Text(colors.length.toString()+' لون'+(low>0?' • '+low.toString()+' منخفض':'')),children:colors.map((item)=>ListTile(title:Text(item.color),subtitle:item.isLow?Text('مخزون '+name+' – '+item.color+' منخفض: متبقي '+item.remainingLength.toStringAsFixed(1)+' متر'):null,trailing:Text(item.remainingLength.toStringAsFixed(1)+' م'))).toList()));}),
           if (canManage) ...[
             const SizedBox(height: 20), const Text('الموردون', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             ...suppliers.map((s) => Card(child: ListTile(title: Text(s.name), subtitle: Text('${s.phone}\nمشتريات ${s.purchases.toStringAsFixed(2)} • مدفوع ${s.paid.toStringAsFixed(2)}'), trailing: PopupMenuButton<String>(onSelected:(v){if(v=='pay')_paySupplier(s);else _addDelivery(s,inventory);},itemBuilder:(_)=>const [PopupMenuItem(value:'delivery',child:Text('تسجيل توريد')),PopupMenuItem(value:'pay',child:Text('تسجيل دفعة'))])))),
@@ -186,7 +193,7 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
   @override Widget build(BuildContext context)=>FutureBuilder<List<InventoryRecord>>(future:inventory,builder:(c,iv)=>FutureBuilder<List<PersonOption>>(future:sellers,builder:(c,ss)=>FutureBuilder<List<PersonOption>>(future:drivers,builder:(c,dd)=>FutureBuilder<List<AddonTypeRecord>>(future:addonTypes,builder:(c,aa){
     if(!iv.hasData||!ss.hasData||!dd.hasData||!aa.hasData)return const Center(child:CircularProgressIndicator());
     if(widget.membership.role==InstitutionRole.accountant)return ListView(padding:const EdgeInsets.all(16),children:[SettlementPanel(membership:widget.membership,repository:widget.repository,sellers:ss.data!)]);
-    final items=iv.data!,t=total(items),paid=payments.fold<double>(0,(a,b)=>a+b.amount),remaining=t-paid;
+    final items=iv.data!,customerAddons=aa.data!.where((x)=>x.behavior=='customer_addon').toList(),t=total(items),paid=payments.fold<double>(0,(a,b)=>a+b.amount),remaining=t-paid;
     return ListView(padding:const EdgeInsets.all(16),children:[
       const Text('بيعة جديدة',style:TextStyle(fontSize:20,fontWeight:FontWeight.bold)),const SizedBox(height:10),
       DropdownButtonFormField<String>(initialValue:inventoryId,decoration:const InputDecoration(labelText:'الصنف واللون'),items:items.where((x)=>x.remainingLength>0).map((x)=>DropdownMenuItem(value:x.id,child:Text(x.name+' • '+x.color+' ('+x.remainingLength.toStringAsFixed(1)+' م)'))).toList(),onChanged:(v)=>setState(()=>inventoryId=v)),
@@ -194,7 +201,7 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
       const SizedBox(height:8),TextField(controller:customer,decoration:const InputDecoration(labelText:'العميل (اختياري)')),
       const SizedBox(height:8),Row(children:[Expanded(child:TextField(controller:length,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'الطول م'))),const SizedBox(width:8),Expanded(child:TextField(controller:price,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع/م²')))]),
       Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text('المساحة: '+(n(length)*4).toStringAsFixed(2)+' م² • العرض 4 م')),
-      OutlinedButton.icon(onPressed:()=>addAddon(aa.data!),icon:const Icon(Icons.add),label:const Text('إضافة تركيب / لباد / حديد / غراء')),
+      OutlinedButton.icon(onPressed:()=>addAddon(customerAddons),icon:const Icon(Icons.add),label:const Text('إضافة تركيب / لباد / حديد')),
       ...addons.asMap().entries.map((e)=>ListTile(title:Text(e.value.name+' × '+e.value.quantity.toStringAsFixed(2)),subtitle:Text((e.value.saleTotal).toStringAsFixed(2)+' ر.س'),trailing:IconButton(icon:const Icon(Icons.delete_outline),onPressed:()=>setState(()=>addons.removeAt(e.key))))),
       const SizedBox(height:8),DropdownButtonFormField<String?>(initialValue:driverId,decoration:const InputDecoration(labelText:'السائق (اختياري)'),items:[const DropdownMenuItem<String?>(value:null,child:Text('بدون سائق')),...dd.data!.map((x)=>DropdownMenuItem<String?>(value:x.id,child:Text(x.name)))],onChanged:(v)=>setState(()=>driverId=v)),
       const SizedBox(height:8),TextField(controller:driverFee,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'تكلفة السائق')),
