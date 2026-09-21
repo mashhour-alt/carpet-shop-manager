@@ -25,6 +25,17 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
         _inventory = widget.repository.loadInventory(widget.membership.institutionId);
       });
 
+  Future<void> _addAddonType(List<SupplierRecord> suppliers) async {
+    final name=TextEditingController(),unit=TextEditingController(text:'piece'),sale=TextEditingController(text:'0'),cost=TextEditingController(text:'0');String? supplierId;
+    final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setD)=>AlertDialog(title:const Text('نوع إضافة'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      TextField(controller:name,decoration:const InputDecoration(labelText:'الاسم')),const SizedBox(height:8),TextField(controller:unit,decoration:const InputDecoration(labelText:'الوحدة: piece / sqm / gallon / job')),
+      const SizedBox(height:8),TextField(controller:sale,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع الافتراضي')),const SizedBox(height:8),TextField(controller:cost,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'التكلفة على المؤسسة')),
+      if(suppliers.isNotEmpty)...[const SizedBox(height:8),DropdownButtonFormField<String?>(initialValue:supplierId,decoration:const InputDecoration(labelText:'المورد (اختياري)'),items:[const DropdownMenuItem<String?>(value:null,child:Text('بدون مورد')),...suppliers.map((x)=>DropdownMenuItem<String?>(value:x.id,child:Text(x.name)))],onChanged:(v)=>setD(()=>supplierId=v))]])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('حفظ'))])));
+    final nm=name.text.trim(),un=unit.text.trim(),sp=_number(sale),cp=_number(cost);for(final x in[name,unit,sale,cost])x.dispose();if(ok!=true||nm.isEmpty||un.isEmpty||sp<0||cp<0)return;
+    await widget.repository.saveAddonType(institutionId:widget.membership.institutionId,name:nm,unit:un,salePrice:sp,costPrice:cp,supplierId:supplierId);_show('تم حفظ نوع الإضافة');
+  }
+
   Future<void> _addSupplier() async {
     final name = TextEditingController();
     final phone = TextEditingController(text: '+966');
@@ -111,7 +122,7 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
         if (!supplierSnapshot.hasData || !inventorySnapshot.hasData) return const Center(child: CircularProgressIndicator());
         final suppliers = supplierSnapshot.data!; final inventory = inventorySnapshot.data!;
         return ListView(padding: const EdgeInsets.all(16), children: [
-          if (canManage) Row(children: [Expanded(child: FilledButton.icon(onPressed: _addSupplier, icon: const Icon(Icons.person_add_alt_1), label: const Text('مورد'))), const SizedBox(width: 8), Expanded(child: FilledButton.icon(onPressed: () => _addInventory(suppliers), icon: const Icon(Icons.add_box_outlined), label: const Text('مخزون')))]),
+          if (canManage) Wrap(spacing:8,runSpacing:8,children:[FilledButton.icon(onPressed:_addSupplier,icon:const Icon(Icons.person_add_alt_1),label:const Text('مورد')),FilledButton.icon(onPressed:()=>_addInventory(suppliers),icon:const Icon(Icons.add_box_outlined),label:const Text('مخزون')),OutlinedButton.icon(onPressed:()=>_addAddonType(suppliers),icon:const Icon(Icons.extension_outlined),label:const Text('إضافة'))]),
           const SizedBox(height: 16), const Text('المخزون', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           if (inventory.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('لا يوجد مخزون.'))),
           ...inventory.map((item) => Card(color: item.isLow ? Colors.orange.shade50 : null, child: ListTile(leading: Icon(item.isLow ? Icons.warning_amber : Icons.inventory_2_outlined), title: Text('${item.name} • ${item.color}'), subtitle: Text('المتبقي ${item.remainingLength.toStringAsFixed(2)} م • عرض 4 م'), trailing: Text('${item.wholesalePrice.toStringAsFixed(2)} ر.س/م²')))),
