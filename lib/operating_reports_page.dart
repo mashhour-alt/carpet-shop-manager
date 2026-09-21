@@ -26,7 +26,7 @@ class _OperatingReportsPageState extends State<OperatingReportsPage> {
   Future<(OperatingSummary,List<OperatingSaleRecord>,List<Map<String,dynamic>>,List<PersonOption>,List<InstitutionTrip>)> _load() async {final (from,to)=_dates();final a=await widget.repository.loadOperatingSummary(widget.membership.institutionId,from,to);final b=await widget.repository.loadOperatingSales(widget.membership.institutionId,from,to,search:search.text);final p=await widget.repository.loadPaymentReport(widget.membership.institutionId,from,to);final sellers=await widget.repository.loadSellers(widget.membership.institutionId);final trips=await widget.repository.loadInstitutionTripsRange(widget.membership.institutionId,from,to);return(a,b,p,sellers,trips);}
   void reload()=>setState(()=>data=_load());
   @override void dispose(){search.dispose();super.dispose();}
-  String money(double v)=>v.toStringAsFixed(2)+' ر.س';
+  String money(double v)=>v.toStringAsFixed(2)+' ⃁';
   String label(ReportRange r)=>switch(r){ReportRange.today=>'اليوم',ReportRange.yesterday=>'أمس',ReportRange.week=>'هذا الأسبوع',ReportRange.month=>'هذا الشهر',ReportRange.previousMonth=>'الشهر السابق',ReportRange.custom=>'فترة مخصصة'};
   Future<void> exportExcel(OperatingSummary s,List<OperatingSaleRecord> sales) async {
     final book=Excel.createExcel();final sheet=book['Farsha Report'];
