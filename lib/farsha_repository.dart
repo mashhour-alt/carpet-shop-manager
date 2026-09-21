@@ -354,11 +354,67 @@ class FarshaRepository {
   Future<List<TaxInvoiceRecord>> loadTaxInvoices(String institutionId) async {
     final rows = await client
         .from('invoices')
-        .select('id,invoice_number,invoice_kind,seller_name,customer_name,customer_commercial_registration,customer_tax_number,customer_address,item_name,color,length,width,area,price_per_sqm,carpet_amount,installation_amount,glue_gallons,glue_amount,iron_pieces,iron_amount,driver_fee,payment_method,subtotal,discount_amount,taxable_amount,vat_amount,total_with_vat,issued_at')
+        .select('id,invoice_number,invoice_kind,seller_name,customer_name,customer_commercial_registration,customer_tax_number,customer_address,item_name,color,length,width,area,price_per_sqm,carpet_amount,installation_amount,glue_gallons,glue_amount,iron_pieces,iron_amount,driver_fee,payment_method,payment_summary,addons_summary,addons_amount,subtotal,discount_amount,taxable_amount,vat_amount,total_with_vat,issued_at')
         .eq('institution_id', institutionId)
         .order('issued_at', ascending: false);
     return (rows as List)
         .map((row) => TaxInvoiceRecord.fromMap(row as Map<String, dynamic>))
         .toList();
   }
+
+  Future<List<AddonTypeRecord>> loadAddonTypes(String institutionId) async {
+    final rows=await client.from('addon_types').select().eq('institution_id',institutionId).eq('is_active',true).order('name');
+    return (rows as List).map((e)=>AddonTypeRecord.fromMap(e as Map<String,dynamic>)).toList();
+  }
+
+  Future<String> recordSaleV2({required String institutionId,required String inventoryId,required String sellerId,String? driverId,required String customerName,required double length,required double salePrice,required double driverFee,required String notes,required List<SalePaymentInput> payments,required List<SaleAddonInput> addons}) async {
+    final result=await client.rpc('record_sale_v2',params:{
+      'p_institution_id':institutionId,'p_inventory_id':inventoryId,'p_seller_id':sellerId,'p_driver_id':driverId,
+      'p_customer_name':customerName.trim(),'p_length':length,'p_sale_price':salePrice,'p_driver_fee':driverFee,'p_notes':notes.trim(),
+      'p_payments':payments.map((e)=>e.toMap()).toList(),'p_addons':addons.map((e)=>e.toMap()).toList(),
+    });
+    return result as String;
+  }
+
+  Future<OperatingSummary> loadOperatingSummary(String institutionId,DateTime from,DateTime to) async {
+    final rows=await client.rpc('operating_summary',params:{'p_institution_id':institutionId,'p_from':from.toIso8601String(),'p_to':to.toIso8601String()});
+    return OperatingSummary.fromMap((rows as List).first as Map<String,dynamic>);
+  }
+
+  Future<List<OperatingSaleRecord>> loadOperatingSales(String institutionId,DateTime from,DateTime to,{String search=''}) async {
+    final rows=await client.rpc('operating_sales',params:{'p_institution_id':institutionId,'p_from':from.toIso8601String(),'p_to':to.toIso8601String(),'p_search':search});
+    return (rows as List).map((e)=>OperatingSaleRecord.fromMap(e as Map<String,dynamic>)).toList();
+  }
+
+  Future<void> voidSale(String saleId,String reason) async {
+    await client.rpc('void_sale',params:{'p_sale_id':saleId,'p_reason':reason.trim()});
+  }
+
+  Future<SellerPerformanceRecord> loadSellerPerformance(String institutionId,String sellerId,DateTime from,DateTime to) async {
+    final rows=await client.rpc('seller_performance',params:{'p_institution_id':institutionId,'p_seller_id':sellerId,'p_from':from.toIso8601String(),'p_to':to.toIso8601String()});
+    return SellerPerformanceRecord.fromMap((rows as List).first as Map<String,dynamic>);
+  }
+
+  Future<List<Map<String,dynamic>>> loadPaymentReport(String institutionId,DateTime from,DateTime to) async {
+    final rows=await client.from('sale_payments').select('method,amount,sale_id,paid_at').eq('institution_id',institutionId).gte('paid_at',from.toIso8601String()).lt('paid_at',to.toIso8601String()).order('paid_at',ascending:false);
+    return List<Map<String,dynamic>>.from(rows);
+  }
+
+  Future<void> recordSupplierDelivery({required String institutionId,required String supplierId,required String inventoryId,required double length,required double unitCost,required double wholesalePrice,String reference='',String notes=''}) async {
+    await client.rpc('record_supplier_delivery',params:{'p_institution_id':institutionId,'p_supplier_id':supplierId,'p_inventory_id':inventoryId,'p_length':length,'p_unit_cost':unitCost,'p_wholesale_price':wholesalePrice,'p_reference':reference.trim(),'p_notes':notes.trim()});
+  }
+  Future<List<Map<String,dynamic>>> loadSupplierDeliveries(String institutionId,String supplierId) async {
+    final rows=await client.from('supplier_deliveries').select('id,reference,notes,delivered_at,supplier_delivery_items(name_snapshot,color_snapshot,length,unit_cost,wholesale_price)').eq('institution_id',institutionId).eq('supplier_id',supplierId).order('delivered_at',ascending:false);
+    return List<Map<String,dynamic>>.from(rows);
+  }
+
+  Future<void> saveAddonType({required String institutionId,required String name,required String unit,required double salePrice,required double costPrice,String? supplierId}) async {
+    await client.rpc('save_addon_type',params:{'p_institution_id':institutionId,'p_name':name.trim(),'p_unit':unit.trim(),'p_sale_price':salePrice,'p_cost_price':costPrice,'p_supplier_id':supplierId});
+  }
+
+  Future<List<InstitutionTrip>> loadInstitutionTripsRange(String institutionId,DateTime from,DateTime to) async {
+    final rows=await client.from('driver_trips').select('id,trip_date,amount,payment_status,payment_method,driver:driver_profiles!driver_trips_driver_id_fkey(profiles(full_name)),seller:profiles!driver_trips_seller_id_fkey(full_name)').eq('institution_id',institutionId).gte('trip_date',from.toIso8601String().split('T').first).lt('trip_date',to.toIso8601String().split('T').first).order('trip_date',ascending:false);
+    return (rows as List).map((row){final da=row['driver'] as Map<String,dynamic>?;final dp=da?['profiles'] as Map<String,dynamic>?;final sp=row['seller'] as Map<String,dynamic>?;return InstitutionTrip(id:row['id'] as String,driverName:dp?['full_name'] as String? ?? 'سائق',sellerName:sp?['full_name'] as String? ?? 'بائع',date:DateTime.parse(row['trip_date'] as String),amount:(row['amount'] as num).toDouble(),isPaid:row['payment_status']=='paid',paymentMethod:row['payment_method'] as String?);}).toList();
+  }
+
 }

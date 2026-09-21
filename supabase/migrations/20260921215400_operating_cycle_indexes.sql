@@ -1,0 +1,12 @@
+create index if not exists addon_types_created_by_idx on public.addon_types(created_by);
+create index if not exists addon_types_supplier_idx on public.addon_types(supplier_id) where supplier_id is not null;
+create index if not exists inventory_movements_institution_idx on public.inventory_movements(institution_id,created_at desc);
+create index if not exists inventory_movements_created_by_idx on public.inventory_movements(created_by) where created_by is not null;
+create index if not exists sale_addons_type_idx on public.sale_addons(addon_type_id) where addon_type_id is not null;
+create index if not exists sale_addons_supplier_idx on public.sale_addons(supplier_id) where supplier_id is not null;
+create index if not exists sale_payments_created_by_idx on public.sale_payments(created_by);
+create index if not exists sales_reversed_by_idx on public.sales(reversed_by) where reversed_by is not null;
+create index if not exists supplier_deliveries_institution_idx on public.supplier_deliveries(institution_id,delivered_at desc);
+create index if not exists supplier_deliveries_created_by_idx on public.supplier_deliveries(created_by);
+create index if not exists supplier_delivery_items_institution_idx on public.supplier_delivery_items(institution_id);
+create index if not exists supplier_delivery_items_inventory_idx on public.supplier_delivery_items(inventory_id);

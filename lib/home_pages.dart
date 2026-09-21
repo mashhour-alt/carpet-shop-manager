@@ -5,6 +5,7 @@ import 'cloud_models.dart';
 import 'documents_page.dart';
 import 'farsha_repository.dart';
 import 'operations_pages.dart';
+import 'operating_reports_page.dart';
 
 class ProfileRouter extends StatefulWidget {
   const ProfileRouter({super.key});
@@ -219,10 +220,11 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
       InstitutionOverview(membership: widget.membership, repository: widget.repository),
       if (manager) MembersPage(membership: widget.membership, repository: widget.repository),
       InstitutionOperationsPage(membership: widget.membership, repository: widget.repository),
+      if (manager) OperatingReportsPage(membership: widget.membership, repository: widget.repository),
       DocumentsPage(membership: widget.membership, repository: widget.repository),
       SalesSettlementPage(membership: widget.membership, repository: widget.repository),
     ];
-    final labels = <String>['الرئيسية', if (manager) 'المستخدمون', 'المخزون', 'المستندات', 'البيع'];
+    final labels = <String>['الرئيسية', if (manager) 'المستخدمون', 'المخزون', if (manager) 'التقارير', 'المستندات', 'البيع'];
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.membership.institutionName),
@@ -243,6 +245,7 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
         'الرئيسية' => Icons.home_outlined,
         'المستخدمون' => Icons.people_outline,
         'المخزون' => Icons.inventory_2_outlined,
+        'التقارير' => Icons.analytics_outlined,
         'المستندات' => Icons.description_outlined,
         _ => Icons.point_of_sale,
       };
@@ -290,12 +293,43 @@ class InstitutionOverview extends StatelessWidget {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  MetricCard(title: 'الموردون', value: '${counts['suppliers']}'),
-                  MetricCard(title: 'المخزون', value: '${counts['inventory']}'),
-                  MetricCard(title: 'المبيعات', value: '${counts['sales']}'),
+                  MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title: 'الموردون', value: '${counts['suppliers']}'),
+                  MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title: 'المخزون', value: '${counts['inventory']}'),
+                  MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title: 'المبيعات', value: '${counts['sales']}'),
                 ],
               ),
               const SizedBox(height: 22),
+              if (membership.role != InstitutionRole.seller)
+                FutureBuilder<OperatingSummary>(
+                  future: repository.loadOperatingSummary(
+                    membership.institutionId,
+                    DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),
+                    DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day).add(const Duration(days: 1)),
+                  ),
+                  builder: (context, daily) {
+                    if (!daily.hasData) return const LinearProgressIndicator();
+                    final x=daily.data!;
+                    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children:[
+                      const Text('ملخص اليوم',style:TextStyle(fontSize:20,fontWeight:FontWeight.bold)),
+                      const SizedBox(height:8),
+                      Wrap(spacing:8,runSpacing:8,children:[
+                        MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title:'المبيعات',value:x.salesAmount.toStringAsFixed(2)),
+                        MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title:'الأمتار',value:x.totalLength.toStringAsFixed(2)),
+                        MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title:'م²',value:x.totalArea.toStringAsFixed(2)),
+                        MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title:'العمليات',value:x.saleCount.toString()),
+                        MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title:'تكلفة البضاعة',value:x.merchandiseCost.toStringAsFixed(2)),
+                        MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title:'السائقين',value:x.driverCost.toStringAsFixed(2)),
+                        MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title:'الربح',value:x.grossProfit.toStringAsFixed(2)),
+                        MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title:'الكاش',value:(x.payments['cash']??0).toStringAsFixed(2)),
+                        MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title:'الشبكة',value:(x.payments['network']??0).toStringAsFixed(2)),
+                        MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title:'التحويل',value:(x.payments['bank_transfer']??0).toStringAsFixed(2)),
+                        MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title:'تمارا',value:(x.payments['tamara']??0).toStringAsFixed(2)),
+                        MetricCard(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OperatingReportsPage(membership:membership,repository:repository))),title:'تابي',value:(x.payments['tabby']??0).toStringAsFixed(2)),
+                      ]),
+                      const SizedBox(height:18),
+                    ]);
+                  },
+                ),
               if (membership.role != InstitutionRole.seller) ...[
                 OutlinedButton.icon(onPressed: () => _editFees(context), icon: const Icon(Icons.percent), label: const Text('رسوم Visa / Tabby / Tamara')),
                 const SizedBox(height: 12),
@@ -631,17 +665,18 @@ class SignOutButton extends StatelessWidget {
 }
 
 class MetricCard extends StatelessWidget {
-  const MetricCard({super.key, required this.title, required this.value});
+  const MetricCard({super.key, required this.title, required this.value, this.onTap});
   final String title;
   final String value;
+  final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => SizedBox(
         width: 150,
         child: Card(
-          child: Padding(
+          child: InkWell(onTap:onTap, child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(children: [Text(title), const SizedBox(height: 8), Text(value, style: Theme.of(context).textTheme.headlineMedium)]),
-          ),
+          )),
         ),
       );
 }

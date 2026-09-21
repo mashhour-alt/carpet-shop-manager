@@ -455,6 +455,13 @@ class TaxInvoiceDocument extends StatelessWidget {
                 : invoice.ironAmount / invoice.ironPieces,
             subtotal: invoice.ironAmount,
           ),
+        if (invoice.addonsAmount > 0)
+          _InvoiceLine(
+            description: invoice.addonsSummary.isEmpty ? 'إضافات / Add-ons' : invoice.addonsSummary,
+            quantity: 1,
+            unitPrice: invoice.addonsAmount,
+            subtotal: invoice.addonsAmount,
+          ),
         if (invoice.driverFee > 0)
           _InvoiceLine(
             description: 'توصيل / Delivery',
@@ -576,7 +583,7 @@ class TaxInvoiceDocument extends StatelessWidget {
                   _InfoRow(
                     arLabel: 'طريقة الدفع',
                     enLabel: 'Payment',
-                    value: _paymentLabel(invoice.paymentMethod),
+                    value: invoice.paymentSummary.isEmpty ? _paymentLabel(invoice.paymentMethod) : invoice.paymentSummary,
                   ),
                   _InfoRow(
                     arLabel: 'البائع',
