@@ -361,4 +361,33 @@ class FarshaRepository {
         .map((row) => TaxInvoiceRecord.fromMap(row as Map<String, dynamic>))
         .toList();
   }
+
+  Future<List<AddonTypeRecord>> loadAddonTypes(String institutionId) async {
+    final rows=await client.from('addon_types').select().eq('institution_id',institutionId).eq('is_active',true).order('name');
+    return (rows as List).map((e)=>AddonTypeRecord.fromMap(e as Map<String,dynamic>)).toList();
+  }
+
+  Future<String> recordSaleV2({required String institutionId,required String inventoryId,required String sellerId,String? driverId,required String customerName,required double length,required double salePrice,required double driverFee,required String notes,required List<SalePaymentInput> payments,required List<SaleAddonInput> addons}) async {
+    final result=await client.rpc('record_sale_v2',params:{
+      'p_institution_id':institutionId,'p_inventory_id':inventoryId,'p_seller_id':sellerId,'p_driver_id':driverId,
+      'p_customer_name':customerName.trim(),'p_length':length,'p_sale_price':salePrice,'p_driver_fee':driverFee,'p_notes':notes.trim(),
+      'p_payments':payments.map((e)=>e.toMap()).toList(),'p_addons':addons.map((e)=>e.toMap()).toList(),
+    });
+    return result as String;
+  }
+
+  Future<OperatingSummary> loadOperatingSummary(String institutionId,DateTime from,DateTime to) async {
+    final rows=await client.rpc('operating_summary',params:{'p_institution_id':institutionId,'p_from':from.toIso8601String(),'p_to':to.toIso8601String()});
+    return OperatingSummary.fromMap((rows as List).first as Map<String,dynamic>);
+  }
+
+  Future<List<OperatingSaleRecord>> loadOperatingSales(String institutionId,DateTime from,DateTime to,{String search=''}) async {
+    final rows=await client.rpc('operating_sales',params:{'p_institution_id':institutionId,'p_from':from.toIso8601String(),'p_to':to.toIso8601String(),'p_search':search});
+    return (rows as List).map((e)=>OperatingSaleRecord.fromMap(e as Map<String,dynamic>)).toList();
+  }
+
+  Future<void> voidSale(String saleId,String reason) async {
+    await client.rpc('void_sale',params:{'p_sale_id':saleId,'p_reason':reason.trim()});
+  }
+
 }
