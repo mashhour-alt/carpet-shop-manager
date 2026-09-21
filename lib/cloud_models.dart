@@ -417,3 +417,41 @@ class TaxInvoiceRecord {
         issuedAt: DateTime.parse(map['issued_at'] as String),
       );
 }
+
+class AddonTypeRecord {
+  const AddonTypeRecord({required this.id, required this.name, required this.unit, required this.defaultSalePrice, required this.defaultCostPrice});
+  final String id; final String name; final String unit; final double defaultSalePrice; final double defaultCostPrice;
+  factory AddonTypeRecord.fromMap(Map<String,dynamic> m)=>AddonTypeRecord(
+    id:m['id'] as String,name:m['name'] as String,unit:m['unit'] as String,
+    defaultSalePrice:(m['default_sale_price'] as num).toDouble(),defaultCostPrice:(m['default_cost_price'] as num).toDouble());
+}
+
+class SalePaymentInput {
+  const SalePaymentInput({required this.method,required this.amount,this.reference=''});
+  final String method; final double amount; final String reference;
+  Map<String,dynamic> toMap()=>{'method':method,'amount':amount,'reference':reference};
+}
+
+class SaleAddonInput {
+  const SaleAddonInput({required this.addonTypeId,required this.name,required this.unit,required this.quantity,required this.saleUnitPrice,required this.costUnitPrice,this.supplierId});
+  final String? addonTypeId; final String name; final String unit; final double quantity; final double saleUnitPrice; final double costUnitPrice; final String? supplierId;
+  Map<String,dynamic> toMap()=>{'addon_type_id':addonTypeId,'name':name,'unit':unit,'quantity':quantity,'sale_unit_price':saleUnitPrice,'cost_unit_price':costUnitPrice,'supplier_id':supplierId};
+  double get saleTotal=>quantity*saleUnitPrice;
+}
+
+class OperatingSummary {
+  const OperatingSummary({required this.salesAmount,required this.totalLength,required this.totalArea,required this.saleCount,required this.merchandiseCost,required this.addonCost,required this.driverCost,required this.paymentFees,required this.grossProfit,required this.payments});
+  final double salesAmount,totalLength,totalArea,merchandiseCost,addonCost,driverCost,paymentFees,grossProfit; final int saleCount; final Map<String,double> payments;
+  factory OperatingSummary.fromMap(Map<String,dynamic> m)=>OperatingSummary(
+    salesAmount:(m['sales_amount'] as num).toDouble(),totalLength:(m['total_length'] as num).toDouble(),totalArea:(m['total_area'] as num).toDouble(),saleCount:(m['sale_count'] as num).toInt(),
+    merchandiseCost:(m['merchandise_cost'] as num).toDouble(),addonCost:(m['addon_cost'] as num).toDouble(),driverCost:(m['driver_cost'] as num).toDouble(),paymentFees:(m['payment_fees'] as num).toDouble(),grossProfit:(m['gross_profit'] as num).toDouble(),
+    payments:{for(final k in ['cash','network','bank_transfer','visa','tamara','tabby','other']) k:(m[k] as num).toDouble()});
+}
+
+class OperatingSaleRecord {
+  const OperatingSaleRecord({required this.id,required this.createdAt,required this.length,required this.area,required this.itemName,required this.color,required this.addons,required this.payments,required this.salesAmount,required this.sellerName,required this.driverName,required this.driverCost,required this.merchandiseCost,required this.addonCost,required this.paymentFees,required this.totalCost,required this.grossProfit,required this.notes,required this.status});
+  final String id,itemName,color,addons,payments,sellerName,driverName,notes,status; final DateTime createdAt; final double length,area,salesAmount,driverCost,merchandiseCost,addonCost,paymentFees,totalCost,grossProfit;
+  factory OperatingSaleRecord.fromMap(Map<String,dynamic> m)=>OperatingSaleRecord(
+    id:m['sale_id'] as String,createdAt:DateTime.parse(m['created_at'] as String),length:(m['length'] as num).toDouble(),area:(m['area'] as num).toDouble(),itemName:m['item_name'] as String,color:m['color'] as String,addons:m['addons'] as String,payments:m['payments'] as String,salesAmount:(m['sales_amount'] as num).toDouble(),sellerName:m['seller_name'] as String,driverName:m['driver_name'] as String,driverCost:(m['driver_cost'] as num).toDouble(),merchandiseCost:(m['merchandise_cost'] as num).toDouble(),addonCost:(m['addon_cost'] as num).toDouble(),paymentFees:(m['payment_fees'] as num).toDouble(),totalCost:(m['total_cost'] as num).toDouble(),grossProfit:(m['gross_profit'] as num).toDouble(),notes:m['notes'] as String,status:m['status'] as String);
+}
+
