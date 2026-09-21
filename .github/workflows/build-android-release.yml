@@ -2,7 +2,7 @@ name: Build Android Release APK
 
 on:
   push:
-    branches: [excel-operating-cycle, account-statements-inventory-materials]
+    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
