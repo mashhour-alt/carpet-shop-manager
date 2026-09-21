@@ -153,7 +153,7 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
   double n(TextEditingController c)=>double.tryParse(c.text.trim())??0;
   void msg(String x)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(x)));
   double get addonSales=>addons.fold(0,(a,b)=>a+b.saleTotal);
-  double total(List<InventoryRecord> items){final item=items.where((e)=>e.id==inventoryId).firstOrNull;if(item==null)return 0;return n(length)*4*n(price)+addonSales+n(driverFee);}
+  double total(List<InventoryRecord> items){final item=items.where((e)=>e.id==inventoryId).firstOrNull;if(item==null)return 0;return n(length)*4*n(price)+addonSales;}
   Future<void> addPayment(double due) async {
     var method='cash';final amount=TextEditingController(text:due>0?due.toStringAsFixed(2):'');final ref=TextEditingController();
     final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setD)=>AlertDialog(title:const Text('إضافة دفعة'),content:Column(mainAxisSize:MainAxisSize.min,children:[
