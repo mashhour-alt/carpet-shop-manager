@@ -53,9 +53,18 @@ class InstitutionAccountHome extends StatefulWidget {
 }
 
 class _InstitutionAccountHomeState extends State<InstitutionAccountHome> {
-  late Future<List<InstitutionMembership>> _memberships = widget.repository.loadMemberships();
+  late Future<List<InstitutionMembership>> _memberships = _loadAll();
 
-  void _reload() => setState(() => _memberships = widget.repository.loadMemberships());
+  Future<List<InstitutionMembership>> _loadAll() async {
+    final values = await Future.wait([widget.repository.loadMemberships(), widget.repository.loadPartnerMemberships()]);
+    final result = <InstitutionMembership>[...values[0]];
+    for (final partner in values[1]) {
+      if (!result.any((x) => x.institutionId == partner.institutionId)) result.add(partner);
+    }
+    return result;
+  }
+
+  void _reload() => setState(() => _memberships = _loadAll());
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<InstitutionMembership>>(
