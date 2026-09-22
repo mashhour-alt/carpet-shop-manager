@@ -72,6 +72,7 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
 
   Future<void> _addInventory(List<SupplierRecord> suppliers) async {
     if (suppliers.isEmpty) return _show('أضف موردًا أولًا');
+    final branches=await widget.repository.loadBranches(widget.membership.institutionId); if(branches.isEmpty)return _show('لا يوجد فرع متاح'); String branchId=branches.firstWhere((b)=>b.isDefault,orElse:()=>branches.first).id;
     final name = TextEditingController(); final color = TextEditingController();
     final length = TextEditingController(); final supplierPrice = TextEditingController();
     final wholesale = TextEditingController(); final low = TextEditingController(text: '10');
@@ -79,7 +80,8 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
     final save = await showDialog<bool>(context: context, builder: (context) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
       title: const Text('إضافة رول موكيت'),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        DropdownButtonFormField<String>(initialValue: supplierId, decoration: const InputDecoration(labelText: 'المورد'), items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(), onChanged: (v) => setDialogState(() => supplierId = v!)),
+        if(branches.length>1) DropdownButtonFormField<String>(initialValue:branchId,decoration:const InputDecoration(labelText:'الفرع'),items:branches.where((b)=>b.status=='active').map((b)=>DropdownMenuItem(value:b.id,child:Text(b.name))).toList(),onChanged:(v)=>setDialogState(()=>branchId=v!)),
+        if(branches.length>1) const SizedBox(height:10), DropdownButtonFormField<String>(initialValue: supplierId, decoration: const InputDecoration(labelText: 'المورد'), items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(), onChanged: (v) => setDialogState(() => supplierId = v!)),
         const SizedBox(height: 10), TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم القطعة')),
         const SizedBox(height: 10), TextField(controller: color, decoration: const InputDecoration(labelText: 'اللون')),
         const SizedBox(height: 10), TextField(controller: length, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الطول بالمتر')),
@@ -93,7 +95,7 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
     final numbers = [_number(length), _number(supplierPrice), _number(wholesale), _number(low)];
     for (final c in [name,color,length,supplierPrice,wholesale,low]) { c.dispose(); }
     if (save != true || values.any((v) => v.isEmpty) || numbers[0] <= 0 || numbers[2] < numbers[1]) return _show('راجع بيانات المخزون');
-    await widget.repository.addInventory(institutionId: widget.membership.institutionId, supplierId: supplierId, name: values[0], color: values[1], length: numbers[0], supplierPrice: numbers[1], wholesalePrice: numbers[2], lowStockAt: numbers[3]);
+    await widget.repository.addInventory(institutionId: widget.membership.institutionId, supplierId: supplierId, name: values[0], color: values[1], length: numbers[0], supplierPrice: numbers[1], wholesalePrice: numbers[2], lowStockAt: numbers[3], branchId: branchId);
     _reload();
   }
 
@@ -139,7 +141,7 @@ class _InstitutionOperationsPageState extends State<InstitutionOperationsPage> {
           if (canManage) Wrap(spacing:8,runSpacing:8,children:[FilledButton.icon(onPressed:_addSupplier,icon:const Icon(Icons.person_add_alt_1),label:const Text('مورد')),FilledButton.icon(onPressed:()=>_addInventory(suppliers),icon:const Icon(Icons.add_box_outlined),label:const Text('مخزون')),OutlinedButton.icon(onPressed:()=>_addAddonType(suppliers),icon:const Icon(Icons.extension_outlined),label:const Text('إضافة'))]),
           const SizedBox(height: 16), const Text('المخزون', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           if (inventory.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('لا يوجد مخزون.'))),
-          ...inventory.map((e)=>e.name).toSet().map((name){final colors=inventory.where((x)=>x.name==name).toList();final low=colors.where((x)=>x.isLow).length;return Card(child:ExpansionTile(leading:Icon(low>0?Icons.warning_amber:Icons.inventory_2_outlined),title:Text(name,style:const TextStyle(fontWeight:FontWeight.bold)),subtitle:Text(colors.length.toString()+' لون'+(low>0?' • '+low.toString()+' منخفض':'')),children:colors.map((item)=>ListTile(title:Text(item.color),subtitle:item.isLow?Text('مخزون '+name+' – '+item.color+' منخفض: متبقي '+item.remainingLength.toStringAsFixed(1)+' متر'):null,trailing:Text(item.remainingLength.toStringAsFixed(1)+' م'))).toList()));}),
+          ...inventory.map((e)=>e.name).toSet().map((name){final colors=inventory.where((x)=>x.name==name).toList();final low=colors.where((x)=>x.isLow).length;return Card(child:ExpansionTile(leading:Icon(low>0?Icons.warning_amber:Icons.inventory_2_outlined),title:Text(name,style:const TextStyle(fontWeight:FontWeight.bold)),subtitle:Text(colors.length.toString()+' لون'+(low>0?' • '+low.toString()+' منخفض':'')),children:colors.map((item)=>ListTile(title:Text(item.color+(item.branchName.isEmpty?'':' • '+item.branchName)),subtitle:item.isLow?Text('مخزون '+name+' – '+item.color+' منخفض: متبقي '+item.remainingLength.toStringAsFixed(1)+' متر'):null,trailing:Text(item.remainingLength.toStringAsFixed(1)+' م'))).toList()));}),
           if (canManage) ...[
             const SizedBox(height: 20), const Text('الموردون', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             ...suppliers.map((s) => Card(child: ListTile(title: Text(s.name), subtitle: Text('${s.phone}\nمشتريات ${s.purchases.toStringAsFixed(2)} • مدفوع ${s.paid.toStringAsFixed(2)}'), trailing: PopupMenuButton<String>(onSelected:(v){if(v=='pay')_paySupplier(s);else _addDelivery(s,inventory);},itemBuilder:(_)=>const [PopupMenuItem(value:'delivery',child:Text('تسجيل توريد')),PopupMenuItem(value:'pay',child:Text('تسجيل دفعة'))])))),
