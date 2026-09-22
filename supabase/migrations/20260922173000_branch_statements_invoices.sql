@@ -21,7 +21,7 @@ language plpgsql stable security definer set search_path=public as $$begin
  select x.created_at,x.entry_type,x.reference,x.note,x.balance_effect,x.creator,sum(x.balance_effect) over(order by x.created_at,x.id) from x order by x.created_at desc;end$$;
 revoke all on function public.supplier_account_statement_branch(uuid,uuid,timestamptz,timestamptz,uuid) from public,anon;grant execute on function public.supplier_account_statement_branch(uuid,uuid,timestamptz,timestamptz,uuid) to authenticated;
 
-create or replace function public.issue_tax_invoice(p_sale_id uuid,p_customer_name text,p_customer_cr text,p_customer_tax text,p_customer_address text,p_invoice_kind text,p_discount numeric)
+create or replace function public.issue_tax_invoice(p_sale_id uuid,p_customer_name text default '',p_customer_cr text default '',p_customer_tax text default '',p_customer_address text default '',p_invoice_kind text default 'simplified',p_discount numeric default 0)
 returns uuid language plpgsql security definer set search_path=public as $$declare s public.sales%rowtype;i public.institutions%rowtype;rid uuid;num bigint;carpet numeric;addons numeric;sub numeric;taxable numeric;vat numeric;totalvat numeric;begin
  select * into s from public.sales where id=p_sale_id;if not found then raise exception 'Sale not found';end if;if not((s.seller_id=auth.uid()) or (public.can_access_branch(s.branch_id) and public.has_institution_role(s.institution_id,array['owner','accountant']::public.institution_role[]))) then raise exception 'Insufficient permission';end if;
  if exists(select 1 from public.invoices where sale_id=s.id) then select id into rid from public.invoices where sale_id=s.id;return rid;end if;
