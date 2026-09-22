@@ -118,13 +118,15 @@ class SupplierRecord {
 }
 
 class InventoryRecord {
-  const InventoryRecord({required this.id, required this.name, required this.color, required this.remainingLength, required this.wholesalePrice, required this.lowStockAt});
+  const InventoryRecord({required this.id, required this.name, required this.color, required this.remainingLength, required this.wholesalePrice, required this.lowStockAt, this.branchId='', this.branchName=''});
   final String id;
   final String name;
   final String color;
   final double remainingLength;
   final double wholesalePrice;
   final double lowStockAt;
+  final String branchId;
+  final String branchName;
   bool get isLow => remainingLength <= lowStockAt;
 
   factory InventoryRecord.fromMap(Map<String, dynamic> map) => InventoryRecord(
@@ -134,6 +136,8 @@ class InventoryRecord {
         remainingLength: (map['remaining_length'] as num).toDouble(),
         wholesalePrice: (map['wholesale_price'] as num).toDouble(),
         lowStockAt: (map['low_stock_at'] as num).toDouble(),
+        branchId: map['branch_id'] as String? ?? '',
+        branchName: (map['branches'] as Map<String,dynamic>?)?['name'] as String? ?? '',
       );
 }
 
