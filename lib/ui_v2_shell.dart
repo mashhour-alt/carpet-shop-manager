@@ -150,7 +150,7 @@ class _OwnerDashboardV2State extends State<OwnerDashboardV2> {
         final d = s.data!;
         final expenseTotal = d.expenses.fold<double>(0, (a, b) => a + (b['amount'] as num).toDouble());
         final collected = d.summary.payments.values.fold<double>(0, (a, b) => a + b);
-        final due = (d.summary.salesAmount - collected).clamp(0, double.infinity);
+        final due = (d.summary.salesAmount - collected).clamp(0.0, double.infinity).toDouble();
         final net = d.summary.grossProfit - expenseTotal;
         final trend = _dailySeries(d.sales);
         final low = d.inventory.where((x) => x.isLow && (branchId == null || x.branchId == branchId)).toList();
@@ -287,7 +287,7 @@ class _AccountantDashboardV2State extends State<AccountantDashboardV2> {
     final summary=s.data!.$1,sales=s.data!.$2,expenses=s.data!.$3,branches=s.data!.$4;
     final outflow=expenses.fold<double>(0,(a,b)=>a+(b['amount'] as num).toDouble());
     final inflow=summary.payments.values.fold<double>(0,(a,b)=>a+b);
-    final due=(summary.salesAmount-inflow).clamp(0,double.infinity);
+    final due=(summary.salesAmount-inflow).clamp(0.0,double.infinity).toDouble();
     return RefreshIndicator(onRefresh:()async=>reload(),child:ListView(padding:const EdgeInsets.fromLTRB(16,14,16,24),children:[
       DashboardHeader(name:widget.profile.fullName,institution:widget.membership.institutionName,subtitle:branches.length>1?'${branches.length} فروع':'المحاسب'),
       const SizedBox(height:14),PeriodSelector(value:period,onChanged:change),const SizedBox(height:14),
@@ -436,7 +436,7 @@ class _AlertTile extends StatelessWidget{
 
 class _DashboardSkeleton extends StatelessWidget{
   const _DashboardSkeleton();
-  @override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(16),children:List.generate(5,(i)=>Container(height:i==1?180:88,margin:const EdgeInsets.only(bottom:12),decoration:BoxDecoration(color:Colors.white.withValues(alpha:.75),borderRadius:BorderRadius.circular(20))));
+  @override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(16),children:List.generate(5,(i)=>Container(height:i==1?180:88,margin:const EdgeInsets.only(bottom:12),decoration:BoxDecoration(color:Colors.white.withValues(alpha:.75),borderRadius:BorderRadius.circular(20)))));
 }
 
 List<double> _dailySeries(List<OperatingSaleRecord> sales){
