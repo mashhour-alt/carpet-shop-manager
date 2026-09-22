@@ -10,7 +10,7 @@ returns uuid language plpgsql security definer set search_path=public as $$decla
  return result_id;end$$;
 revoke all on function public.create_inventory_item(uuid,uuid,text,text,numeric,numeric,numeric,numeric,uuid) from public,anon;grant execute on function public.create_inventory_item(uuid,uuid,text,text,numeric,numeric,numeric,numeric,uuid) to authenticated;
 
-create or replace function public.record_supplier_delivery(p_institution_id uuid,p_supplier_id uuid,p_inventory_id uuid,p_length numeric,p_unit_cost numeric,p_wholesale_price numeric,p_reference text,p_notes text)
+create or replace function public.record_supplier_delivery(p_institution_id uuid,p_supplier_id uuid,p_inventory_id uuid,p_length numeric,p_unit_cost numeric,p_wholesale_price numeric,p_reference text default '',p_notes text default '')
 returns uuid language plpgsql security definer set search_path=public as $$declare inv public.inventory_items%rowtype;delivery_id uuid;line_total numeric;begin
  select * into inv from public.inventory_items where id=p_inventory_id and institution_id=p_institution_id for update;if not found then raise exception 'Inventory item not found';end if;
  if not public.can_manage_branch(inv.branch_id,'inventory') then raise exception 'Insufficient branch permission';end if;if p_length<=0 or p_unit_cost<0 then raise exception 'Invalid delivery values';end if;
