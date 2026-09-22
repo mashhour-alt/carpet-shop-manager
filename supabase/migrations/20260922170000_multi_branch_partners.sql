@@ -69,12 +69,12 @@ alter table public.driver_account_entries add column branch_id uuid references p
 update public.inventory_items x set branch_id=b.id from public.branches b where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
 update public.sales x set branch_id=b.id from public.branches b where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
 update public.quotations x set branch_id=b.id from public.branches b where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
-update public.invoices x set branch_id=coalesce(s.branch_id,b.id) from public.branches b left join public.sales s on s.id=x.sale_id where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
+update public.invoices x set branch_id=coalesce((select s.branch_id from public.sales s where s.id=x.sale_id),b.id) from public.branches b where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
 update public.supplier_deliveries x set branch_id=b.id from public.branches b where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
-update public.seller_ledger x set branch_id=coalesce(s.branch_id,b.id) from public.branches b left join public.sales s on x.source_type='sale' and s.id=x.source_id where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
-update public.driver_trips x set branch_id=coalesce(s.branch_id,b.id) from public.branches b left join public.sales s on s.id=x.sale_id where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
-update public.inventory_movements x set branch_id=coalesce(ii.branch_id,b.id) from public.branches b left join public.inventory_items ii on ii.id=x.inventory_id where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
-update public.addon_movements x set branch_id=coalesce(s.branch_id,b.id) from public.branches b left join public.sales s on s.id=x.sale_id where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
+update public.seller_ledger x set branch_id=coalesce((select s.branch_id from public.sales s where x.source_type='sale' and s.id=x.source_id),b.id) from public.branches b where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
+update public.driver_trips x set branch_id=coalesce((select s.branch_id from public.sales s where s.id=x.sale_id),b.id) from public.branches b where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
+update public.inventory_movements x set branch_id=coalesce((select ii.branch_id from public.inventory_items ii where ii.id=x.inventory_id),b.id) from public.branches b where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
+update public.addon_movements x set branch_id=coalesce((select s.branch_id from public.sales s where s.id=x.sale_id),b.id) from public.branches b where b.institution_id=x.institution_id and b.is_default and x.branch_id is null;
 update public.supplier_account_entries x set branch_id=coalesce(d.branch_id,null) from public.supplier_deliveries d where x.source_type='delivery' and x.source_id=d.id and x.branch_id is null;
 update public.driver_account_entries x set branch_id=t.branch_id from public.driver_trips t where x.source_type='trip' and x.source_id=t.id and x.branch_id is null;
 
