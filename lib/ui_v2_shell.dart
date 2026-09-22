@@ -263,13 +263,14 @@ class AccountantDashboardV2 extends StatefulWidget {
 class _AccountantDashboardV2State extends State<AccountantDashboardV2> {
   DashboardPeriod period = DashboardPeriod.month;
   DateTimeRange? custom;
+  String? branchId;
   late Future<(OperatingSummary,List<OperatingSaleRecord>,List<Map<String,dynamic>>,List<BranchRecord>)> data = load();
   Future<(OperatingSummary,List<OperatingSaleRecord>,List<Map<String,dynamic>>,List<BranchRecord>)> load() async {
     final r = periodRange(period, custom: custom);
     final x = await Future.wait<dynamic>([
-      widget.repository.loadOperatingSummary(widget.membership.institutionId, r.from, r.to),
-      widget.repository.loadDashboardSales(widget.membership.institutionId, r.from, r.to),
-      widget.repository.loadExpenses(widget.membership.institutionId, r.from, r.to),
+      widget.repository.loadBranchOperatingSummary(widget.membership.institutionId, branchId, r.from, r.to),
+      widget.repository.loadDashboardSales(widget.membership.institutionId, r.from, r.to, branchId: branchId),
+      widget.repository.loadExpenses(widget.membership.institutionId, r.from, r.to, branchId: branchId),
       widget.repository.loadAccessibleBranches(widget.membership.institutionId),
     ]);
     return (x[0] as OperatingSummary, x[1] as List<OperatingSaleRecord>, x[2] as List<Map<String,dynamic>>, x[3] as List<BranchRecord>);
@@ -289,7 +290,7 @@ class _AccountantDashboardV2State extends State<AccountantDashboardV2> {
     final inflow=summary.payments.values.fold<double>(0,(a,b)=>a+b);
     final due=(summary.salesAmount-inflow).clamp(0.0,double.infinity).toDouble();
     return RefreshIndicator(onRefresh:()async=>reload(),child:ListView(padding:const EdgeInsets.fromLTRB(16,14,16,24),children:[
-      DashboardHeader(name:widget.profile.fullName,institution:widget.membership.institutionName,subtitle:branches.length>1?'${branches.length} فروع':'المحاسب'),
+      DashboardHeader(name:widget.profile.fullName,institution:widget.membership.institutionName,subtitle:'المحاسب',branches:branches,selectedBranchId:branchId,onBranchChanged:branches.length>1?(v){branchId=v;reload();}:null),
       const SizedBox(height:14),PeriodSelector(value:period,onChanged:change),const SizedBox(height:14),
       HeroMetricCard(title:'التدفق النقدي',value:farshaMoney(inflow-outflow),caption:'داخل ${farshaMoney(inflow)} • خارج ${farshaMoney(outflow)}',icon:Icons.account_balance_outlined,child:MiniLineChart(values:_dailySeries(sales),color:Colors.white,height:72)),
       const SizedBox(height:12),KpiGrid(children:[
@@ -347,16 +348,18 @@ class PartnerDashboardV2 extends StatefulWidget {
 }
 class _PartnerDashboardV2State extends State<PartnerDashboardV2>{
   DashboardPeriod period=DashboardPeriod.month;
+  int scopeIndex=0;
   @override Widget build(BuildContext context){
-    final scopes=(widget.contextData['partner_scopes'] as List?)??const[];final scope=scopes.isEmpty?null:scopes.first as Map<String,dynamic>?;final history=(scope?['partner_entitlement_history'] as List?)??const[];final pct=history.isEmpty?0.0:((history.first as Map)['percentage'] as num).toDouble();final relationship=widget.contextData['relationship_type'] as String? ?? '';final admin=relationship=='administrative_partner'||relationship=='authorized_manager';final range=periodRange(period);
+    final scopes=(widget.contextData['partner_scopes'] as List?)??const[];final safeIndex=scopes.isEmpty?0:scopeIndex.clamp(0,scopes.length-1);final scope=scopes.isEmpty?null:scopes[safeIndex] as Map<String,dynamic>?;final history=(scope?['partner_entitlement_history'] as List?)??const[];final pct=history.isEmpty?0.0:((history.first as Map)['percentage'] as num).toDouble();final relationship=widget.contextData['relationship_type'] as String? ?? '';final admin=relationship=='administrative_partner'||relationship=='authorized_manager';final range=periodRange(period);
     return FutureBuilder<List<Map<String,dynamic>>>(future:widget.repository.loadPartnerStatement(widget.membership.institutionId,widget.contextData['id'] as String,range.from,range.to,branchId:scope?['branch_id'] as String?),builder:(context,s){if(!s.hasData)return const _DashboardSkeleton();final rows=s.data!;final entitlement=rows.where((x)=>x['kind']=='entitlement').fold<double>(0,(a,b)=>a+(b['amount'] as num).toDouble());final distributed=rows.where((x)=>x['kind']=='distribution'||x['kind']=='withdrawal'||x['kind']=='settlement').fold<double>(0,(a,b)=>a+(b['amount'] as num).abs().toDouble());final balance=rows.isEmpty?0.0:(rows.first['running_balance'] as num).toDouble();
       return ListView(padding:const EdgeInsets.fromLTRB(16,14,16,24),children:[
         DashboardHeader(name:widget.profile.fullName,institution:widget.membership.institutionName,subtitle:'شريك'),
+        if(scopes.length>1)...[const SizedBox(height:10),DropdownButtonFormField<int>(initialValue:safeIndex,decoration:const InputDecoration(labelText:'نطاق الشراكة / الفرع'),items:List.generate(scopes.length,(i){final x=scopes[i] as Map<String,dynamic>;return DropdownMenuItem(value:i,child:Text((x['branches'] as Map<String,dynamic>?)?['name'] as String? ?? (x['scope_type']=='institution'?'كل المؤسسة':'النطاق ${i+1}')));}),onChanged:(v)=>setState(()=>scopeIndex=v??0))],
         const SizedBox(height:14),PeriodSelector(value:period,onChanged:(v)=>setState(()=>period=v)),const SizedBox(height:14),
         if(admin&&pct==0)
           const EmptyState(title:'صلاحيات إدارية',subtitle:'هذا الحساب شريك إداري بنسبة استحقاق 0%، لذلك لا نعرض أرباحًا غير موجودة.',icon:Icons.admin_panel_settings_outlined)
         else ...[
-          HeroMetricCard(title:'نصيبي المستحق',value:farshaMoney(balance),caption:'نسبة الاستحقاق ${pct.toStringAsFixed(1)}%',icon:Icons.handshake_outlined),
+          HeroMetricCard(title:'نصيبي المستحق',value:farshaMoney(balance),caption:'نسبة الاستحقاق ${pct.toStringAsFixed(1)}%',icon:Icons.handshake_outlined,child:MiniLineChart(values:rows.reversed.map((x)=>(x['running_balance'] as num).toDouble()).toList(),color:Colors.white,height:72)),
           const SizedBox(height:12),KpiGrid(children:[
             KpiCard(title:'الاستحقاقات',value:farshaMoney(entitlement),icon:Icons.trending_up,accent:partnerPurple),
             KpiCard(title:'تم توزيعه',value:farshaMoney(distributed),icon:Icons.payments_outlined,accent:positiveGreen),
