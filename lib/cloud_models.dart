@@ -493,9 +493,16 @@ class BranchRecord {
   factory BranchRecord.fromMap(Map<String,dynamic> m)=>BranchRecord(id:m['id'] as String,name:m['name'] as String,code:m['code'] as String,city:m['city'] as String? ?? '',address:m['address'] as String? ?? '',phone:m['phone'] as String? ?? '',status:m['status'] as String,isDefault:m['is_default'] as bool? ?? false);
 }
 class PartnerRecord {
-  const PartnerRecord({required this.id,required this.name,required this.relationship,required this.status,this.userId});
-  final String id,name,relationship,status; final String? userId;
-  factory PartnerRecord.fromMap(Map<String,dynamic> m)=>PartnerRecord(id:m['id'] as String,name:m['display_name'] as String,relationship:m['relationship_type'] as String,status:m['status'] as String,userId:m['user_id'] as String?);
+  const PartnerRecord({required this.id,required this.name,required this.relationship,required this.status,this.userId,this.percentage=0,this.scope='institution',this.branchId});
+  final String id,name,relationship,status; final String? userId; final double percentage; final String scope; final String? branchId;
+  bool get isAdministrative => relationship=='administrative_partner' || relationship=='authorized_manager';
+  factory PartnerRecord.fromMap(Map<String,dynamic> m) {
+    final scopes=(m['partner_scopes'] as List?) ?? const [];
+    final scope=scopes.isEmpty?null:scopes.first as Map<String,dynamic>;
+    final history=(scope?['partner_entitlement_history'] as List?) ?? const [];
+    final active=history.isEmpty?null:history.first as Map<String,dynamic>;
+    return PartnerRecord(id:m['id'] as String,name:m['display_name'] as String,relationship:m['relationship_type'] as String,status:m['status'] as String,userId:m['user_id'] as String?,percentage:(active?['percentage'] as num?)?.toDouble()??0,scope:scope?['scope'] as String? ?? 'institution',branchId:scope?['branch_id'] as String?);
+  }
 }
 class BranchReportRecord {
   const BranchReportRecord({required this.branchId,required this.name,required this.sales,required this.cost,required this.profit,required this.expenses,required this.length,required this.area,required this.count});
