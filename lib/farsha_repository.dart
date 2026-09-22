@@ -477,7 +477,11 @@ class FarshaRepository {
       final ids = (allowed as List).map((e) => e['id'] as String).toSet();
       rows = rows.where((x) => ids.contains(x.id)).toList();
     }
-    if (sellerId != null) rows = rows.where((x) => x.sellerName.isNotEmpty).toList();
+    if (sellerId != null) {
+      final own = await client.from('sales').select('id').eq('institution_id', institutionId).eq('seller_id', sellerId).gte('created_at', from.toIso8601String()).lt('created_at', to.toIso8601String());
+      final ids = (own as List).map((e) => e['id'] as String).toSet();
+      rows = rows.where((x) => ids.contains(x.id)).toList();
+    }
     return rows;
   }
 
