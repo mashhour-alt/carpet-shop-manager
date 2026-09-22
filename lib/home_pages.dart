@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cloud_models.dart';
-import 'app_shell_v2.dart';
-import 'dashboard_components.dart';
 import 'account_statements_page.dart';
 import 'materials_page.dart';
 import 'branches_partners_page.dart';
@@ -12,6 +10,8 @@ import 'documents_page.dart';
 import 'farsha_repository.dart';
 import 'operations_pages.dart';
 import 'operating_reports_page.dart';
+import 'ui_v2_shell.dart';
+import 'ui_v2_components.dart';
 
 class ProfileRouter extends StatefulWidget {
   const ProfileRouter({super.key});
@@ -53,18 +53,9 @@ class InstitutionAccountHome extends StatefulWidget {
 }
 
 class _InstitutionAccountHomeState extends State<InstitutionAccountHome> {
-  late Future<List<InstitutionMembership>> _memberships = _loadAll();
+  late Future<List<InstitutionMembership>> _memberships = widget.repository.loadMemberships();
 
-  Future<List<InstitutionMembership>> _loadAll() async {
-    final values = await Future.wait([widget.repository.loadMemberships(), widget.repository.loadPartnerMemberships()]);
-    final result = <InstitutionMembership>[...values[0]];
-    for (final partner in values[1]) {
-      if (!result.any((x) => x.institutionId == partner.institutionId)) result.add(partner);
-    }
-    return result;
-  }
-
-  void _reload() => setState(() => _memberships = _loadAll());
+  void _reload() => setState(() => _memberships = widget.repository.loadMemberships());
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<InstitutionMembership>>(
@@ -81,9 +72,10 @@ class _InstitutionAccountHomeState extends State<InstitutionAccountHome> {
             );
           }
           if (memberships.length == 1) {
-            return InstitutionDashboardV2(
+            return FarshaShellV2(
               membership: memberships.first,
               repository: widget.repository,
+              profile: widget.profile,
             );
           }
           return Scaffold(
@@ -99,9 +91,10 @@ class _InstitutionAccountHomeState extends State<InstitutionAccountHome> {
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => InstitutionDashboardV2(
+                              builder: (_) => FarshaShellV2(
                                 membership: membership,
                                 repository: widget.repository,
+                                profile: widget.profile,
                               ),
                             ),
                           ),
@@ -627,26 +620,62 @@ class DriverHome extends StatefulWidget {
   final FarshaRepository repository;
   @override State<DriverHome> createState() => _DriverHomeState();
 }
+
 class _DriverHomeState extends State<DriverHome> {
-  late Future<List<DriverTrip>> trips = widget.repository.loadDriverTrips();
-  void reload()=>setState(()=>trips=widget.repository.loadDriverTrips());
-  @override Widget build(BuildContext context)=>Scaffold(
-    body:SafeArea(child:FutureBuilder<List<DriverTrip>>(future:trips,builder:(context,s){
-      if(s.hasError)return ErrorPage(message:s.error.toString(),retry:reload);
-      if(!s.hasData)return const DashboardSkeleton();
-      final rows=s.data!,today=DateTime.now(),todayRows=rows.where((x)=>x.date.year==today.year&&x.date.month==today.month&&x.date.day==today.day).toList();
-      final delivered=todayRows.where((x)=>x.paymentStatus=='paid').length,pending=todayRows.length-delivered;
-      final monthRows=rows.where((x)=>x.date.year==today.year&&x.date.month==today.month).toList(),total=monthRows.fold<double>(0,(a,b)=>a+b.amount),paid=monthRows.where((x)=>x.paymentStatus=='paid').fold<double>(0,(a,b)=>a+b.amount);
-      final next=todayRows.where((x)=>x.paymentStatus!='paid').firstOrNull;
-      return RefreshIndicator(onRefresh:()async=>reload(),child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.all(16),children:[
-        DashboardHeader(name:widget.profile.fullName,institutionName:'فرشة',roleLabel:'السائق'),const SizedBox(height:18),
-        Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(24)),child:Row(children:[ProgressRing(value:todayRows.isEmpty?0:delivered/todayRows.length,center:todayRows.length.toString()+'\\nمشاوير'),const SizedBox(width:18),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('مشاوير اليوم',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800)),const SizedBox(height:6),Text(delivered.toString()+' تم • '+pending.toString()+' متبقي',style:const TextStyle(color:Colors.black54)),const SizedBox(height:10),LinearProgressIndicator(value:todayRows.isEmpty?0:delivered/todayRows.length,borderRadius:BorderRadius.circular(8))]))])),
-        const SizedBox(height:18),const SectionTitle('المشوار القادم'),
-        if(next==null)const DashboardEmptyState(message:'لا توجد مشاوير متبقية اليوم',icon:Icons.check_circle_outline)else Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(next.customerName.isEmpty?'مشوار توصيل':next.customerName,style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800)),const SizedBox(height:6),Text(next.institutionName+(next.branchName.isEmpty?'':' • '+next.branchName)),Text('البائع: '+next.sellerName),const SizedBox(height:12),FilledButton.icon(onPressed:null,icon:const Icon(Icons.check),label:const Text('بيانات حالة التسليم غير متاحة حاليًا'))]))),
-        const SizedBox(height:18),KpiGrid(children:[KpiCard(title:'مستحقاتي هذا الشهر',value:farshaMoney(total),icon:Icons.account_balance_wallet_outlined,accent:farshaPurple),KpiCard(title:'المدفوع',value:farshaMoney(paid),icon:Icons.payments_outlined,accent:farshaGreen),KpiCard(title:'المتبقي',value:farshaMoney(total-paid),icon:Icons.schedule_outlined,accent:farshaOrange)]),
-        const SizedBox(height:18),const SectionTitle('سجل المشاوير'),if(rows.isEmpty)const DashboardEmptyState(message:'لا توجد مشاوير مسجلة حتى الآن')else ...rows.take(20).map((x)=>Card(child:ListTile(leading:const Icon(Icons.route),title:Text(x.customerName.isEmpty?x.institutionName:x.customerName),subtitle:Text(x.institutionName+' • '+x.date.toLocal().toString().split(' ').first+' • '+(x.paymentStatus=='paid'?'مدفوع':'غير مدفوع')),trailing:Text(farshaMoney(x.amount)))))
-      ]));
-    })),
+  late Future<List<DriverTrip>> _trips = widget.repository.loadDriverTrips();
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: FutureBuilder<List<DriverTrip>>(
+        future: _trips,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) return ErrorPage(message: '${snapshot.error}', retry: () => setState(() => _trips = widget.repository.loadDriverTrips()));
+          if (!snapshot.hasData) return const BrandedLoading();
+          final trips = snapshot.data!;
+          final now = DateTime.now();
+          final today = trips.where((x) => x.date.year == now.year && x.date.month == now.month && x.date.day == now.day).toList();
+          final month = trips.where((x) => x.date.year == now.year && x.date.month == now.month).toList();
+          final paid = month.where((x) => x.paymentStatus == 'paid').fold<double>(0, (a,b) => a+b.amount);
+          final total = month.fold<double>(0, (a,b) => a+b.amount);
+          final delivered = today.where((x) => x.paymentStatus == 'paid').length;
+          final next = today.where((x) => x.paymentStatus != 'paid').firstOrNull;
+          return RefreshIndicator(
+            onRefresh: () async => setState(() => _trips = widget.repository.loadDriverTrips()),
+            child: ListView(padding: const EdgeInsets.fromLTRB(16,14,16,24), children: [
+              DashboardHeader(name: widget.profile.fullName, institution: 'فرشة', subtitle: 'السائق'),
+              const SizedBox(height: 16),
+              Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [
+                ProgressRing(value: today.isEmpty ? 0 : delivered/today.length, centerText: '${today.length}\nمشوار'),
+                const SizedBox(width: 18),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('مشاوير اليوم', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 6),
+                  Text('$delivered تم • ${today.length-delivered} متبقي', style: TextStyle(color: Colors.grey.shade700)),
+                ])),
+              ]))),
+              const SizedBox(height: 20),
+              const SectionTitle('المشوار القادم'),
+              if (next == null)
+                const EmptyState(title: 'لا توجد مشاوير متبقية اليوم', icon: Icons.task_alt)
+              else
+                Card(child: ListTile(contentPadding: const EdgeInsets.all(14), leading: const CircleAvatar(backgroundColor: Color(0xffE9F4EE), child: Icon(Icons.route, color: positiveGreen)), title: Text(next.institutionName, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('البائع: ${next.sellerName}\n${next.date.toLocal().toString().substring(0,10)}'), trailing: Text(farshaMoney(next.amount), style: const TextStyle(fontWeight: FontWeight.w800)))),
+              const SizedBox(height: 20),
+              const SectionTitle('حسابي هذا الشهر'),
+              KpiGrid(children: [
+                KpiCard(title:'إجمالي المستحق',value:farshaMoney(total),icon:Icons.account_balance_wallet_outlined,accent:infoBlue),
+                KpiCard(title:'المدفوع',value:farshaMoney(paid),icon:Icons.check_circle_outline,accent:positiveGreen),
+                KpiCard(title:'المتبقي',value:farshaMoney(total-paid),icon:Icons.schedule,accent:warningOrange),
+                KpiCard(title:'عدد المشاوير',value:month.length.toString(),icon:Icons.route_outlined,accent:partnerPurple),
+              ]),
+              const SizedBox(height: 20),
+              const SectionTitle('سجل المشاوير'),
+              if (trips.isEmpty) const EmptyState(title:'لا توجد مشاوير مسجلة حتى الآن',icon:Icons.route_outlined) else ...trips.take(20).map((trip)=>ListTile(contentPadding:EdgeInsets.zero,leading:Icon(trip.paymentStatus=='paid'?Icons.check_circle:Icons.route,color:trip.paymentStatus=='paid'?positiveGreen:null),title:Text(trip.institutionName),subtitle:Text('${trip.sellerName} • ${trip.date.toLocal().toString().substring(0,10)}'),trailing:Text(farshaMoney(trip.amount),style:const TextStyle(fontWeight:FontWeight.w800)))),
+            ]),
+          );
+        },
+      ),
+    ),
   );
 }
 

@@ -203,23 +203,43 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
     if(!iv.hasData||!ss.hasData||!dd.hasData||!aa.hasData)return const Center(child:CircularProgressIndicator());
     if(widget.membership.role==InstitutionRole.accountant)return ListView(padding:const EdgeInsets.all(16),children:[SettlementPanel(membership:widget.membership,repository:widget.repository,sellers:ss.data!)]);
     final items=iv.data!,customerAddons=aa.data!.where((x)=>x.behavior=='customer_addon').toList(),t=total(items),paid=payments.fold<double>(0,(a,b)=>a+b.amount),remaining=t-paid;
+    Widget section(String title,IconData icon,List<Widget> children,{bool initiallyExpanded=true})=>Card(child:ExpansionTile(initiallyExpanded:initiallyExpanded,leading:Icon(icon),title:Text(title,style:const TextStyle(fontWeight:FontWeight.bold)),children:[Padding(padding:const EdgeInsets.fromLTRB(14,0,14,14),child:Column(children:children))]));
     return ListView(padding:const EdgeInsets.all(16),children:[
-      const Text('بيعة جديدة',style:TextStyle(fontSize:20,fontWeight:FontWeight.bold)),const SizedBox(height:10),
-      DropdownButtonFormField<String>(initialValue:inventoryId,decoration:const InputDecoration(labelText:'الصنف واللون'),items:items.where((x)=>x.remainingLength>0).map((x)=>DropdownMenuItem(value:x.id,child:Text(x.name+' • '+x.color+' ('+x.remainingLength.toStringAsFixed(1)+' م)'))).toList(),onChanged:(v)=>setState(()=>inventoryId=v)),
-      if(widget.membership.role!=InstitutionRole.seller)...[const SizedBox(height:8),DropdownButtonFormField<String>(initialValue:sellerId,decoration:const InputDecoration(labelText:'البائع'),items:ss.data!.map((x)=>DropdownMenuItem(value:x.id,child:Text(x.name))).toList(),onChanged:(v)=>setState(()=>sellerId=v))],
-      const SizedBox(height:8),TextField(controller:customer,decoration:const InputDecoration(labelText:'العميل (اختياري)')),
-      const SizedBox(height:8),Row(children:[Expanded(child:TextField(controller:length,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'الطول م'))),const SizedBox(width:8),Expanded(child:TextField(controller:price,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع/م²')))]),
-      Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text('المساحة: '+(n(length)*4).toStringAsFixed(2)+' م² • العرض 4 م')),
-      OutlinedButton.icon(onPressed:()=>addAddon(customerAddons),icon:const Icon(Icons.add),label:const Text('إضافة تركيب / لباد / حديد')),
-      ...addons.asMap().entries.map((e)=>ListTile(title:Text(e.value.name+' × '+e.value.quantity.toStringAsFixed(2)),subtitle:Text((e.value.saleTotal).toStringAsFixed(2)+' ⃁'),trailing:IconButton(icon:const Icon(Icons.delete_outline),onPressed:()=>setState(()=>addons.removeAt(e.key))))),
-      const SizedBox(height:8),DropdownButtonFormField<String?>(initialValue:driverId,decoration:const InputDecoration(labelText:'السائق (اختياري)'),items:[const DropdownMenuItem<String?>(value:null,child:Text('بدون سائق')),...dd.data!.map((x)=>DropdownMenuItem<String?>(value:x.id,child:Text(x.name)))],onChanged:(v)=>setState(()=>driverId=v)),
-      const SizedBox(height:8),TextField(controller:driverFee,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'تكلفة السائق')),
-      const SizedBox(height:8),TextField(controller:notes,maxLines:2,decoration:const InputDecoration(labelText:'ملاحظات')),
-      const Divider(height:28),Text('إجمالي البيع: '+t.toStringAsFixed(2)+' ⃁',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18)),
-      ...payments.asMap().entries.map((e)=>ListTile(title:Text(e.value.method),subtitle:Text(e.value.amount.toStringAsFixed(2)+' ⃁'+(e.value.reference.isEmpty?'':' • '+e.value.reference)),trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>setState(()=>payments.removeAt(e.key))))),
-      OutlinedButton.icon(onPressed:()=>addPayment(remaining),icon:const Icon(Icons.payments_outlined),label:Text('إضافة دفعة • المتبقي '+remaining.toStringAsFixed(2)+' ⃁')),
-      const SizedBox(height:12),FilledButton(onPressed:busy?null:()=>save(items),child:Text(busy?'جاري الحفظ...':'حفظ البيع وخصم المخزون')),
-      const SizedBox(height:24),SettlementPanel(membership:widget.membership,repository:widget.repository,sellers:ss.data!),
+      const Text('بيعة جديدة',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text('أكمل الأقسام بالترتيب ثم راجع الإجمالي قبل الحفظ.',style:TextStyle(color:Colors.grey.shade700)),const SizedBox(height:14),
+      section('1. الصنف واللون',Icons.inventory_2_outlined,[
+        DropdownButtonFormField<String>(initialValue:inventoryId,decoration:const InputDecoration(labelText:'الصنف واللون'),items:items.where((x)=>x.remainingLength>0).map((x)=>DropdownMenuItem(value:x.id,child:Text(x.name+' • '+x.color+' ('+x.remainingLength.toStringAsFixed(1)+' م)'))).toList(),onChanged:(v)=>setState(()=>inventoryId=v)),
+        if(widget.membership.role!=InstitutionRole.seller)...[const SizedBox(height:10),DropdownButtonFormField<String>(initialValue:sellerId,decoration:const InputDecoration(labelText:'البائع'),items:ss.data!.map((x)=>DropdownMenuItem(value:x.id,child:Text(x.name))).toList(),onChanged:(v)=>setState(()=>sellerId=v))],
+        const SizedBox(height:10),TextField(controller:customer,decoration:const InputDecoration(labelText:'العميل (اختياري)')),
+      ]),
+      const SizedBox(height:10),
+      section('2. المقاس والسعر',Icons.straighten,[
+        Row(children:[Expanded(child:TextField(controller:length,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'الطول م'))),const SizedBox(width:8),Expanded(child:TextField(controller:price,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع/م²')))]),
+        Padding(padding:const EdgeInsets.only(top:10),child:Align(alignment:Alignment.centerRight,child:Text('المساحة: '+(n(length)*4).toStringAsFixed(2)+' م² • العرض ثابت 4 م',style:const TextStyle(fontWeight:FontWeight.w600)))),
+      ]),
+      const SizedBox(height:10),
+      section('3. الإضافات',Icons.extension_outlined,[
+        SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:()=>addAddon(customerAddons),icon:const Icon(Icons.add),label:const Text('إضافة تركيب / لباد / حديد'))),
+        ...addons.asMap().entries.map((e)=>ListTile(contentPadding:EdgeInsets.zero,title:Text(e.value.name+' × '+e.value.quantity.toStringAsFixed(2)),subtitle:Text((e.value.saleTotal).toStringAsFixed(2)+' ⃁'),trailing:IconButton(icon:const Icon(Icons.delete_outline),onPressed:()=>setState(()=>addons.removeAt(e.key))))),
+      ],initiallyExpanded:addons.isNotEmpty),
+      const SizedBox(height:10),
+      section('4. التوصيل والسائق',Icons.local_shipping_outlined,[
+        DropdownButtonFormField<String?>(initialValue:driverId,decoration:const InputDecoration(labelText:'السائق (اختياري)'),items:[const DropdownMenuItem<String?>(value:null,child:Text('بدون سائق')),...dd.data!.map((x)=>DropdownMenuItem<String?>(value:x.id,child:Text(x.name)))],onChanged:(v)=>setState(()=>driverId=v)),
+        const SizedBox(height:10),TextField(controller:driverFee,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'تكلفة السائق')),
+        const SizedBox(height:10),TextField(controller:notes,maxLines:2,decoration:const InputDecoration(labelText:'ملاحظات')),
+      ],initiallyExpanded:driverId!=null),
+      const SizedBox(height:10),
+      section('5. الدفع',Icons.payments_outlined,[
+        ...payments.asMap().entries.map((e)=>ListTile(contentPadding:EdgeInsets.zero,title:Text(e.value.method),subtitle:Text(e.value.amount.toStringAsFixed(2)+' ⃁'+(e.value.reference.isEmpty?'':' • '+e.value.reference)),trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>setState(()=>payments.removeAt(e.key))))),
+        SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:()=>addPayment(remaining),icon:const Icon(Icons.add_card),label:Text('إضافة دفعة • المتبقي '+remaining.toStringAsFixed(2)+' ⃁'))),
+      ],initiallyExpanded:payments.isNotEmpty),
+      const SizedBox(height:10),
+      section('6. المراجعة والإجمالي',Icons.fact_check_outlined,[
+        Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('إجمالي البيع',style:TextStyle(fontWeight:FontWeight.bold)),Text(t.toStringAsFixed(2)+' ⃁',style:const TextStyle(fontWeight:FontWeight.w900,fontSize:22))]),
+        const SizedBox(height:8),Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('المدفوع'),Text(paid.toStringAsFixed(2)+' ⃁')]),
+        const SizedBox(height:8),Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('المتبقي'),Text(remaining.toStringAsFixed(2)+' ⃁',style:TextStyle(fontWeight:FontWeight.bold,color:remaining.abs()>.009?Colors.red:null))]),
+        const SizedBox(height:14),SizedBox(width:double.infinity,child:FilledButton(onPressed:busy?null:()=>save(items),child:Text(busy?'جاري الحفظ...':'حفظ البيع وخصم المخزون'))),
+      ]),
+      if(widget.membership.role!=InstitutionRole.seller)...[const SizedBox(height:24),SettlementPanel(membership:widget.membership,repository:widget.repository,sellers:ss.data!)],
     ]);
   }))));
 }
