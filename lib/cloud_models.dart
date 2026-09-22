@@ -118,13 +118,15 @@ class SupplierRecord {
 }
 
 class InventoryRecord {
-  const InventoryRecord({required this.id, required this.name, required this.color, required this.remainingLength, required this.wholesalePrice, required this.lowStockAt});
+  const InventoryRecord({required this.id, required this.name, required this.color, required this.remainingLength, required this.wholesalePrice, required this.lowStockAt, this.branchId='', this.branchName=''});
   final String id;
   final String name;
   final String color;
   final double remainingLength;
   final double wholesalePrice;
   final double lowStockAt;
+  final String branchId;
+  final String branchName;
   bool get isLow => remainingLength <= lowStockAt;
 
   factory InventoryRecord.fromMap(Map<String, dynamic> map) => InventoryRecord(
@@ -134,6 +136,8 @@ class InventoryRecord {
         remainingLength: (map['remaining_length'] as num).toDouble(),
         wholesalePrice: (map['wholesale_price'] as num).toDouble(),
         lowStockAt: (map['low_stock_at'] as num).toDouble(),
+        branchId: map['branch_id'] as String? ?? '',
+        branchName: (map['branches'] as Map<String,dynamic>?)?['name'] as String? ?? '',
       );
 }
 
@@ -481,4 +485,20 @@ class SellerPerformanceRecord {
   const SellerPerformanceRecord({required this.saleCount,required this.totalLength,required this.totalArea,required this.salesAmount,required this.merchandiseCost,required this.grossProfit,required this.commission,required this.ledgerDeductions,required this.netDue});
   final int saleCount; final double totalLength,totalArea,salesAmount,commission,ledgerDeductions,netDue; final double? merchandiseCost,grossProfit;
   factory SellerPerformanceRecord.fromMap(Map<String,dynamic> m)=>SellerPerformanceRecord(saleCount:(m['sale_count'] as num).toInt(),totalLength:(m['total_length'] as num).toDouble(),totalArea:(m['total_area'] as num).toDouble(),salesAmount:(m['sales_amount'] as num).toDouble(),merchandiseCost:(m['merchandise_cost'] as num?)?.toDouble(),grossProfit:(m['gross_profit'] as num?)?.toDouble(),commission:(m['commission'] as num).toDouble(),ledgerDeductions:(m['ledger_deductions'] as num).toDouble(),netDue:(m['net_due'] as num).toDouble());
+}
+
+class BranchRecord {
+  const BranchRecord({required this.id,required this.name,required this.code,required this.city,required this.address,required this.phone,required this.status,required this.isDefault});
+  final String id,name,code,city,address,phone,status; final bool isDefault;
+  factory BranchRecord.fromMap(Map<String,dynamic> m)=>BranchRecord(id:m['id'] as String,name:m['name'] as String,code:m['code'] as String,city:m['city'] as String? ?? '',address:m['address'] as String? ?? '',phone:m['phone'] as String? ?? '',status:m['status'] as String,isDefault:m['is_default'] as bool? ?? false);
+}
+class PartnerRecord {
+  const PartnerRecord({required this.id,required this.name,required this.relationship,required this.status,this.userId});
+  final String id,name,relationship,status; final String? userId;
+  factory PartnerRecord.fromMap(Map<String,dynamic> m)=>PartnerRecord(id:m['id'] as String,name:m['display_name'] as String,relationship:m['relationship_type'] as String,status:m['status'] as String,userId:m['user_id'] as String?);
+}
+class BranchReportRecord {
+  const BranchReportRecord({required this.branchId,required this.name,required this.sales,required this.cost,required this.profit,required this.expenses,required this.length,required this.area,required this.count});
+  final String branchId,name;final double sales,cost,profit,expenses,length,area;final int count;
+  factory BranchReportRecord.fromMap(Map<String,dynamic> m)=>BranchReportRecord(branchId:m['branch_id'] as String,name:m['branch_name'] as String,sales:(m['sales'] as num).toDouble(),cost:(m['cost'] as num).toDouble(),profit:(m['profit'] as num).toDouble(),expenses:(m['expenses'] as num).toDouble(),length:(m['length_sold'] as num).toDouble(),area:(m['area_sold'] as num).toDouble(),count:(m['sale_count'] as num).toInt());
 }
