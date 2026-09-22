@@ -10,6 +10,7 @@ import 'documents_page.dart';
 import 'farsha_repository.dart';
 import 'operations_pages.dart';
 import 'operating_reports_page.dart';
+import 'ui_v2_shell.dart';
 
 class ProfileRouter extends StatefulWidget {
   const ProfileRouter({super.key});
@@ -70,9 +71,10 @@ class _InstitutionAccountHomeState extends State<InstitutionAccountHome> {
             );
           }
           if (memberships.length == 1) {
-            return InstitutionDashboard(
+            return FarshaShellV2(
               membership: memberships.first,
               repository: widget.repository,
+              profile: widget.profile,
             );
           }
           return Scaffold(
@@ -88,9 +90,10 @@ class _InstitutionAccountHomeState extends State<InstitutionAccountHome> {
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => InstitutionDashboard(
+                              builder: (_) => FarshaShellV2(
                                 membership: membership,
                                 repository: widget.repository,
+                                profile: widget.profile,
                               ),
                             ),
                           ),
