@@ -541,7 +541,7 @@ class FarshaRepository {
         .eq('user_id', userId)
         .eq('status', 'active')
         .limit(1);
-    if ((rows as List).isEmpty) return null;
+    if (rows.isEmpty) return null;
     return PartnerContextRecord.fromMap(rows.first as Map<String, dynamic>);
   }
 
