@@ -1,12 +1,13 @@
 enum AccountKind { institution, driver }
 
-enum InstitutionRole { owner, accountant, seller }
+enum InstitutionRole { owner, accountant, seller, partner }
 
 extension InstitutionRoleLabel on InstitutionRole {
   String get label => switch (this) {
         InstitutionRole.owner => 'صاحب المؤسسة',
         InstitutionRole.accountant => 'المحاسب',
         InstitutionRole.seller => 'البائع',
+        InstitutionRole.partner => 'الشريك',
       };
 
   static InstitutionRole parse(String value) =>
@@ -72,6 +73,8 @@ class DriverTrip {
     required this.amount,
     required this.paymentStatus,
     required this.paymentMethod,
+    this.customerName = '',
+    this.branchName = '',
   });
 
   final String id;
@@ -81,6 +84,8 @@ class DriverTrip {
   final double amount;
   final String paymentStatus;
   final String? paymentMethod;
+  final String customerName;
+  final String branchName;
 
   factory DriverTrip.fromMap(Map<String, dynamic> map) {
     final institution = map['institutions'] as Map<String, dynamic>?;
@@ -93,6 +98,8 @@ class DriverTrip {
       amount: (map['amount'] as num).toDouble(),
       paymentStatus: map['payment_status'] as String,
       paymentMethod: map['payment_method'] as String?,
+      customerName: (map['sales'] as Map<String,dynamic>?)?['customer_name'] as String? ?? '',
+      branchName: (map['branches'] as Map<String,dynamic>?)?['name'] as String? ?? '',
     );
   }
 }
@@ -502,3 +509,9 @@ class BranchReportRecord {
   final String branchId,name;final double sales,cost,profit,expenses,length,area;final int count;
   factory BranchReportRecord.fromMap(Map<String,dynamic> m)=>BranchReportRecord(branchId:m['branch_id'] as String,name:m['branch_name'] as String,sales:(m['sales'] as num).toDouble(),cost:(m['cost'] as num).toDouble(),profit:(m['profit'] as num).toDouble(),expenses:(m['expenses'] as num).toDouble(),length:(m['length_sold'] as num).toDouble(),area:(m['area_sold'] as num).toDouble(),count:(m['sale_count'] as num).toInt());
 }
+
+class DashboardSalePoint{const DashboardSalePoint({required this.id,required this.createdAt,required this.total,required this.length,required this.area,required this.branchId,required this.sellerId,required this.customerName,required this.status});final String id,branchId,sellerId,customerName,status;final DateTime createdAt;final double total,length,area;factory DashboardSalePoint.fromMap(Map<String,dynamic> m)=>DashboardSalePoint(id:m['id'] as String,createdAt:DateTime.parse(m['created_at'] as String),total:(m['total'] as num).toDouble(),length:(m['length'] as num).toDouble(),area:(m['area'] as num).toDouble(),branchId:m['branch_id'] as String? ?? '',sellerId:m['seller_id'] as String? ?? '',customerName:m['customer_name'] as String? ?? '',status:m['status'] as String? ?? 'completed');}
+class ExpenseRecord{const ExpenseRecord({required this.id,required this.date,required this.category,required this.amount,required this.notes,required this.branchId});final String id,category,notes;final DateTime date;final double amount;final String? branchId;factory ExpenseRecord.fromMap(Map<String,dynamic> m)=>ExpenseRecord(id:m['id'] as String,date:DateTime.parse(m['expense_date'] as String),category:m['category'] as String,amount:(m['amount'] as num).toDouble(),notes:m['notes'] as String? ?? '',branchId:m['branch_id'] as String?);}
+class PartnerScopeRecord{const PartnerScopeRecord({required this.id,required this.scope,required this.branchId,required this.branchName,required this.currentPercentage});final String id,scope,branchName;final String? branchId;final double currentPercentage;factory PartnerScopeRecord.fromMap(Map<String,dynamic> m){final b=m['branches'] as Map<String,dynamic>?,h=((m['partner_entitlement_history'] as List?)??const[]).cast<Map<String,dynamic>>()..sort((a,b)=>(b['effective_from'] as String).compareTo(a['effective_from'] as String));return PartnerScopeRecord(id:m['id'] as String,scope:m['scope'] as String,branchId:m['branch_id'] as String?,branchName:b?['name'] as String? ?? '',currentPercentage:h.isEmpty?0:(h.first['percentage'] as num).toDouble());}}
+class PartnerContextRecord{const PartnerContextRecord({required this.partnerId,required this.institutionId,required this.displayName,required this.relationship,required this.status,required this.scopes});final String partnerId,institutionId,displayName,relationship,status;final List<PartnerScopeRecord> scopes;bool get isAdministrativeOnly=>scopes.isNotEmpty&&scopes.every((x)=>x.currentPercentage==0);factory PartnerContextRecord.fromMap(Map<String,dynamic> m)=>PartnerContextRecord(partnerId:m['id'] as String,institutionId:m['institution_id'] as String,displayName:m['display_name'] as String,relationship:m['relationship_type'] as String,status:m['status'] as String,scopes:((m['partner_scopes'] as List?)??const[]).map((x)=>PartnerScopeRecord.fromMap(x as Map<String,dynamic>)).toList());}
+class PartnerLedgerRecord{const PartnerLedgerRecord({required this.id,required this.kind,required this.amount,required this.createdAt,required this.notes,required this.branchId,required this.branchName});final String id,kind,notes,branchName;final double amount;final DateTime createdAt;final String? branchId;factory PartnerLedgerRecord.fromMap(Map<String,dynamic> m){final b=m['branches'] as Map<String,dynamic>?;return PartnerLedgerRecord(id:m['id'] as String,kind:m['kind'] as String,amount:(m['amount'] as num).toDouble(),createdAt:DateTime.parse(m['created_at'] as String),notes:m['notes'] as String? ?? '',branchId:m['branch_id'] as String?,branchName:b?['name'] as String? ?? '');}}

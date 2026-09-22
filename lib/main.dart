@@ -30,10 +30,30 @@ class FarshaApp extends StatelessWidget {
           useMaterial3: true,
           colorSchemeSeed: const Color(0xff8f1423),
           scaffoldBackgroundColor: const Color(0xfff7f3ea),
-          inputDecorationTheme: const InputDecorationTheme(
-            border: OutlineInputBorder(),
+          fontFamilyFallback: const ['Noto Sans Arabic', 'Arial'],
+          cardTheme: CardThemeData(
+            elevation: 0,
+            color: Colors.white,
+            margin: const EdgeInsets.symmetric(vertical: 5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: const BorderSide(color: Color(0xffeee8df)),
+            ),
+          ),
+          navigationBarTheme: const NavigationBarThemeData(
+            backgroundColor: Colors.white,
+            indicatorColor: Color(0x1a8f1423),
+            elevation: 4,
+            labelTextStyle: WidgetStatePropertyAll(TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xffe7dfd4))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xffe7dfd4))),
             filled: true,
             fillColor: Colors.white,
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13)),
           ),
         ),
         builder: (context, child) => Directionality(
