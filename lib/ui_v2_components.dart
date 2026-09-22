@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'cloud_models.dart';
-import 'farsha_repository.dart';
 
 const farshaBurgundy = Color(0xff861B2C);
 const farshaCream = Color(0xffF7F3EA);
