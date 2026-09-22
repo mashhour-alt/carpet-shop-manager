@@ -441,4 +441,76 @@ class FarshaRepository {
   Future<String> addPartner({required String institutionId,String? userId,required String name,String phone='',required String relationship,required String scope,String? branchId,required double percentage,required DateTime effectiveFrom,String notes=''}) async=>await client.rpc('add_partner',params:{'p_institution_id':institutionId,'p_user_id':userId,'p_name':name,'p_phone':phone,'p_relationship':relationship,'p_scope':scope,'p_branch_id':branchId,'p_percentage':percentage,'p_effective_from':effectiveFrom.toIso8601String().substring(0,10),'p_notes':notes}) as String;
   Future<List<BranchReportRecord>> loadBranchReport(String institutionId,DateTime from,DateTime to) async {final rows=await client.rpc('branch_report',params:{'p_institution_id':institutionId,'p_from':from.toIso8601String(),'p_to':to.toIso8601String()});return (rows as List).map((e)=>BranchReportRecord.fromMap(e as Map<String,dynamic>)).toList();}
   Future<void> recordExpense({required String institutionId,String? branchId,required String category,required double amount,String method='',String reference='',String notes='',DateTime? date}) async=>client.rpc('record_expense',params:{'p_institution_id':institutionId,'p_branch_id':branchId,'p_category':category,'p_amount':amount,'p_method':method,'p_reference':reference,'p_notes':notes,'p_date':(date??DateTime.now()).toIso8601String().substring(0,10)});
+  Future<bool> hasActiveAccountant(String institutionId) async {
+    final rows = await client.from('institution_memberships').select('user_id').eq('institution_id', institutionId).eq('role', 'accountant').eq('status', 'active').limit(1);
+    return (rows as List).isNotEmpty;
+  }
+
+  Future<OperatingSummary> loadBranchOperatingSummary(String institutionId, String? branchId, DateTime from, DateTime to) async {
+    if (branchId == null) return loadOperatingSummary(institutionId, from, to);
+    final rows = await client.rpc('branch_operating_summary', params: {
+      'p_institution_id': institutionId,
+      'p_branch_id': branchId,
+      'p_from': from.toIso8601String(),
+      'p_to': to.toIso8601String(),
+    });
+    final row = (rows as List).first as Map<String, dynamic>;
+    final payments = Map<String, dynamic>.from((row['payments'] as Map?) ?? const {});
+    return OperatingSummary(
+      salesAmount: (row['sales_amount'] as num).toDouble(),
+      totalLength: (row['total_length'] as num).toDouble(),
+      totalArea: (row['total_area'] as num).toDouble(),
+      saleCount: (row['sale_count'] as num).toInt(),
+      merchandiseCost: (row['merchandise_cost'] as num).toDouble(),
+      addonCost: 0,
+      driverCost: (row['driver_cost'] as num).toDouble(),
+      paymentFees: 0,
+      grossProfit: (row['gross_profit'] as num).toDouble(),
+      payments: {for (final k in ['cash','network','bank_transfer','visa','tamara','tabby','other']) k: (payments[k] as num?)?.toDouble() ?? 0},
+    );
+  }
+
+  Future<List<OperatingSaleRecord>> loadDashboardSales(String institutionId, DateTime from, DateTime to, {String? branchId, String? sellerId}) async {
+    var rows = await loadOperatingSales(institutionId, from, to);
+    if (branchId != null) {
+      final allowed = await client.from('sales').select('id').eq('institution_id', institutionId).eq('branch_id', branchId).gte('created_at', from.toIso8601String()).lt('created_at', to.toIso8601String());
+      final ids = (allowed as List).map((e) => e['id'] as String).toSet();
+      rows = rows.where((x) => ids.contains(x.id)).toList();
+    }
+    if (sellerId != null) rows = rows.where((x) => x.sellerName.isNotEmpty).toList();
+    return rows;
+  }
+
+  Future<List<Map<String, dynamic>>> loadRecentActivity(String institutionId, {String? branchId, int limit = 8}) async {
+    var query = client.from('sales').select('id,customer_name,total,created_at,branch_id,profiles!sales_seller_id_fkey(full_name)').eq('institution_id', institutionId).eq('status', 'completed');
+    if (branchId != null) query = query.eq('branch_id', branchId);
+    final rows = await query.order('created_at', ascending: false).limit(limit);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<List<Map<String, dynamic>>> loadExpenses(String institutionId, DateTime from, DateTime to, {String? branchId}) async {
+    var query = client.from('expenses').select('id,branch_id,expense_date,category,amount,payment_method,reference,notes,created_at').eq('institution_id', institutionId).gte('expense_date', from.toIso8601String().substring(0,10)).lt('expense_date', to.toIso8601String().substring(0,10));
+    if (branchId != null) query = query.eq('branch_id', branchId);
+    final rows = await query.order('expense_date', ascending: false);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<List<Map<String, dynamic>>> loadPartnerStatement(String institutionId, String partnerId, DateTime from, DateTime to, {String? branchId}) async {
+    final rows = await client.rpc('partner_statement', params: {
+      'p_institution_id': institutionId,
+      'p_partner_id': partnerId,
+      'p_from': from.toIso8601String(),
+      'p_to': to.toIso8601String(),
+      'p_branch_id': branchId,
+    });
+    return List<Map<String, dynamic>>.from(rows as List);
+  }
+
+  Future<Map<String, dynamic>?> loadMyPartnerContext(String institutionId) async {
+    final rows = await client.from('partners').select('id,display_name,relationship_type,status,partner_scopes(id,scope,branch_id,effective_from,effective_to,partner_entitlement_history(percentage,effective_from,effective_to))').eq('institution_id', institutionId).eq('user_id', userId).eq('status', 'active').limit(1);
+    return (rows as List).isEmpty ? null : Map<String, dynamic>.from(rows.first as Map);
+  }
+
+  Future<List<BranchRecord>> loadAccessibleBranches(String institutionId) async => loadBranches(institutionId);
+
 }
