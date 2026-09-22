@@ -560,7 +560,7 @@ class FarshaRepository {
         .eq('status', 'active')
         .limit(1);
     if (rows.isEmpty) return null;
-    return PartnerContextRecord.fromMap(rows.first as Map<String, dynamic>);
+    return PartnerContextRecord.fromMap(rows.first);
   }
 
   Future<List<PartnerLedgerRecord>> loadPartnerLedger(
