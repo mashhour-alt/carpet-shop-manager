@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'cloud_models.dart';
 import 'account_statements_page.dart';
 import 'materials_page.dart';
+import 'branches_partners_page.dart';
+import 'branch_report_page.dart';
 import 'documents_page.dart';
 import 'farsha_repository.dart';
 import 'operations_pages.dart';
@@ -221,14 +223,16 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
     final pages = <Widget>[
       InstitutionOverview(membership: widget.membership, repository: widget.repository),
       if (manager) MembersPage(membership: widget.membership, repository: widget.repository),
+      if (widget.membership.role == InstitutionRole.owner) BranchesPartnersPage(membership: widget.membership, repository: widget.repository),
       InstitutionOperationsPage(membership: widget.membership, repository: widget.repository),
       if (manager) MaterialsPage(membership: widget.membership, repository: widget.repository),
       if (manager) OperatingReportsPage(membership: widget.membership, repository: widget.repository),
+      if (manager) BranchReportPage(membership: widget.membership, repository: widget.repository),
       AccountStatementsPage(membership: widget.membership, repository: widget.repository, personalSeller: !manager),
       DocumentsPage(membership: widget.membership, repository: widget.repository),
       SalesSettlementPage(membership: widget.membership, repository: widget.repository),
     ];
-    final labels = <String>['الرئيسية', if (manager) 'المستخدمون', 'المخزون', if (manager) 'المستلزمات', if (manager) 'التقارير', manager ? 'كشف الحساب' : 'حسابي', 'المستندات', 'البيع'];
+    final labels = <String>['الرئيسية', if (manager) 'المستخدمون', if (widget.membership.role == InstitutionRole.owner) 'الفروع والشركاء', 'المخزون', if (manager) 'المستلزمات', if (manager) 'التقارير', if (manager) 'تقرير الفروع', manager ? 'كشف الحساب' : 'حسابي', 'المستندات', 'البيع'];
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.membership.institutionName),
@@ -248,6 +252,8 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
   IconData _navIcon(String label) => switch (label) {
         'الرئيسية' => Icons.home_outlined,
         'المستخدمون' => Icons.people_outline,
+        'الفروع والشركاء' => Icons.account_tree_outlined,
+        'تقرير الفروع' => Icons.store_mall_directory_outlined,
         'المخزون' => Icons.inventory_2_outlined,
         'المستلزمات' => Icons.handyman_outlined,
         'التقارير' => Icons.analytics_outlined,
