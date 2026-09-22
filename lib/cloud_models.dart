@@ -1,12 +1,13 @@
 enum AccountKind { institution, driver }
 
-enum InstitutionRole { owner, accountant, seller }
+enum InstitutionRole { owner, accountant, seller, partner }
 
 extension InstitutionRoleLabel on InstitutionRole {
   String get label => switch (this) {
         InstitutionRole.owner => 'صاحب المؤسسة',
         InstitutionRole.accountant => 'المحاسب',
         InstitutionRole.seller => 'البائع',
+        InstitutionRole.partner => 'الشريك',
       };
 
   static InstitutionRole parse(String value) =>
