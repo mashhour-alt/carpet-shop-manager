@@ -2,7 +2,7 @@ name: Build Android Release APK
 
 on:
   push:
-    branches: [main, multi-branch-partners]
+    branches: [main, multi-branch-partners, ui-ux-v2]
   release:
     types: [published]
   workflow_dispatch:
