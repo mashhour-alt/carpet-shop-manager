@@ -1,5 +1,5 @@
 -- Tighten branch/partner RLS and legacy RPCs after multi-branch rollout.
-create or replace function public.create_quotation(p_institution_id uuid,p_seller_id uuid,p_inventory_id uuid,p_customer_name text,p_customer_cr text,p_customer_tax text,p_length numeric,p_price_per_sqm numeric,p_valid_until date,p_notes text)
+create or replace function public.create_quotation(p_institution_id uuid,p_seller_id uuid,p_inventory_id uuid,p_customer_name text,p_customer_cr text,p_customer_tax text,p_length numeric,p_price_per_sqm numeric,p_valid_until date,p_notes text default '')
 returns uuid language plpgsql security definer set search_path=public as $$declare inv public.inventory_items%rowtype;q uuid;begin
  select * into inv from public.inventory_items where id=p_inventory_id and institution_id=p_institution_id;if not found then raise exception 'Inventory not found';end if;
  if not public.can_manage_branch(inv.branch_id,'sell') then raise exception 'Insufficient branch permission';end if;
