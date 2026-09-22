@@ -151,8 +151,8 @@ class FarshaRepository {
   }
 
   Future<void> updateSupplierCategories(String institutionId,String supplierId,List<String> categories) async => client.rpc('update_supplier_categories',params:{'p_institution_id':institutionId,'p_supplier_id':supplierId,'p_categories':categories});
-  Future<void> recordSupplierAccountEntry({required String institutionId,required String supplierId,required String type,required double amount,String method='',String reference='',String note=''}) async => client.rpc('record_supplier_account_entry',params:{'p_institution_id':institutionId,'p_supplier_id':supplierId,'p_entry_type':type,'p_amount':amount,'p_payment_method':method,'p_reference':reference,'p_note':note});
-  Future<void> recordDriverAccountEntry({required String institutionId,required String driverId,required String type,required double amount,String method='cash',String reference='',String note=''}) async => client.rpc('record_driver_account_entry',params:{'p_institution_id':institutionId,'p_driver_id':driverId,'p_entry_type':type,'p_amount':amount,'p_payment_method':method,'p_reference':reference,'p_note':note});
+  Future<void> recordSupplierAccountEntry({required String institutionId,required String supplierId,required String type,required double amount,String method='',String reference='',String note='',String? branchId}) async => client.rpc('record_supplier_account_entry',params:{'p_institution_id':institutionId,'p_supplier_id':supplierId,'p_entry_type':type,'p_amount':amount,'p_payment_method':method,'p_reference':reference,'p_note':note,'p_branch_id':branchId});
+  Future<void> recordDriverAccountEntry({required String institutionId,required String driverId,required String type,required double amount,String method='cash',String reference='',String note='',String? branchId}) async => client.rpc('record_driver_account_entry',params:{'p_institution_id':institutionId,'p_driver_id':driverId,'p_entry_type':type,'p_amount':amount,'p_payment_method':method,'p_reference':reference,'p_note':note,'p_branch_id':branchId});
   Future<List<AccountSummaryRecord>> loadAccountSummaries(String institutionId,String party,DateTime from,DateTime to) async {final rows=await client.rpc('account_summaries',params:{'p_institution_id':institutionId,'p_party':party,'p_from':from.toIso8601String(),'p_to':to.toIso8601String()});return (rows as List).map((e)=>AccountSummaryRecord.fromMap(e as Map<String,dynamic>)).toList();}
   Future<List<AccountMovementRecord>> loadAccountStatement(String institutionId,String party,String partyId,DateTime from,DateTime to) async {final fn=switch(party){'seller'=>'seller_account_statement','driver'=>'driver_account_statement',_=>'supplier_account_statement'};final key=switch(party){'seller'=>'p_seller_id','driver'=>'p_driver_id',_=>'p_supplier_id'};final rows=await client.rpc(fn,params:{'p_institution_id':institutionId,key:partyId,'p_from':from.toIso8601String(),'p_to':to.toIso8601String()});return (rows as List).map((e)=>AccountMovementRecord.fromMap(e as Map<String,dynamic>)).toList();}
   Future<void> saveAddonTypeV2({required String institutionId,required String name,required String unit,required double salePrice,required double costPrice,String? supplierId,required String behavior,required String calculationBasis,required bool trackStock,required double openingStock,required double lowStockAt,required bool customerVisible,required bool chargeToSeller}) async => client.rpc('save_addon_type_v2',params:{'p_institution_id':institutionId,'p_name':name,'p_unit':unit,'p_sale_price':salePrice,'p_cost_price':costPrice,'p_supplier_id':supplierId,'p_behavior':behavior,'p_calculation_basis':calculationBasis,'p_track_stock':trackStock,'p_opening_stock':openingStock,'p_low_stock_at':lowStockAt,'p_customer_visible':customerVisible,'p_charge_to_seller':chargeToSeller});
@@ -160,11 +160,11 @@ class FarshaRepository {
   Future<void> issueInternalAddon(String institutionId,String addonId,String sellerId,double quantity,String note) async => client.rpc('issue_internal_addon',params:{'p_institution_id':institutionId,'p_addon_type_id':addonId,'p_seller_id':sellerId,'p_quantity':quantity,'p_sale_id':null,'p_note':note});
 
   Future<List<InventoryRecord>> loadInventory(String institutionId) async {
-    final rows = await client.from('inventory_items').select().eq('institution_id', institutionId).order('name');
+    final rows = await client.from('inventory_items').select('*,branches(name)').eq('institution_id', institutionId).order('name');
     return (rows as List).map((row) => InventoryRecord.fromMap(row as Map<String, dynamic>)).toList();
   }
 
-  Future<void> addInventory({required String institutionId, required String supplierId, required String name, required String color, required double length, required double supplierPrice, required double wholesalePrice, required double lowStockAt}) async {
+  Future<void> addInventory({required String institutionId, required String supplierId, required String name, required String color, required double length, required double supplierPrice, required double wholesalePrice, required double lowStockAt, String? branchId}) async {
     await client.rpc('create_inventory_item', params: {
       'p_institution_id': institutionId,
       'p_supplier_id': supplierId,
@@ -174,6 +174,7 @@ class FarshaRepository {
       'p_supplier_price': supplierPrice,
       'p_wholesale_price': wholesalePrice,
       'p_low_stock_at': lowStockAt,
+      'p_branch_id': branchId,
     });
   }
 
