@@ -11,6 +11,7 @@ import 'farsha_repository.dart';
 import 'operations_pages.dart';
 import 'operating_reports_page.dart';
 import 'ui_v2_shell.dart';
+import 'ui_v2_components.dart';
 
 class ProfileRouter extends StatefulWidget {
   const ProfileRouter({super.key});
@@ -617,9 +618,7 @@ class DriverHome extends StatefulWidget {
   const DriverHome({super.key, required this.profile, required this.repository});
   final UserProfile profile;
   final FarshaRepository repository;
-
-  @override
-  State<DriverHome> createState() => _DriverHomeState();
+  @override State<DriverHome> createState() => _DriverHomeState();
 }
 
 class _DriverHomeState extends State<DriverHome> {
@@ -627,47 +626,57 @@ class _DriverHomeState extends State<DriverHome> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text('مرحبًا ${widget.profile.fullName}'), actions: const [SignOutButton()]),
-        body: FutureBuilder<List<DriverTrip>>(
-          future: _trips,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) return ErrorPage(message: '${snapshot.error}', retry: () => setState(() => _trips = widget.repository.loadDriverTrips()));
-            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-            final trips = snapshot.data!;
-            if (trips.isEmpty) return const Center(child: Text('لا توجد مشاوير مسجلة حتى الآن.'));
-            final totals = <String, double>{};
-            final pending = <String, double>{};
-            for (final trip in trips) {
-              totals.update(trip.institutionName, (value) => value + trip.amount, ifAbsent: () => trip.amount);
-              if (trip.paymentStatus != 'paid') pending.update(trip.institutionName, (value) => value + trip.amount, ifAbsent: () => trip.amount);
-            }
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const Text('حسابك منفصل مع كل مؤسسة', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                ...totals.entries.map((entry) => Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.storefront),
-                        title: Text(entry.key),
-                        subtitle: Text('المتبقي ${(pending[entry.key] ?? 0).toStringAsFixed(2)} ⃁'),
-                        trailing: Text('الإجمالي\n${entry.value.toStringAsFixed(2)} ⃁', textAlign: TextAlign.center),
-                      ),
-                    )),
-                const Divider(height: 30),
-                ...trips.map((trip) => Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.route),
-                        title: Text(trip.institutionName),
-                        subtitle: Text('${trip.sellerName} • ${trip.date.toLocal().toString().split(' ').first} • ${trip.paymentStatus == 'paid' ? 'مدفوع' : 'غير مدفوع'}'),
-                        trailing: Text('${trip.amount.toStringAsFixed(2)} ⃁'),
-                      ),
-                    )),
-              ],
-            );
-          },
-        ),
-      );
+    body: SafeArea(
+      child: FutureBuilder<List<DriverTrip>>(
+        future: _trips,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) return ErrorPage(message: '${snapshot.error}', retry: () => setState(() => _trips = widget.repository.loadDriverTrips()));
+          if (!snapshot.hasData) return const BrandedLoading();
+          final trips = snapshot.data!;
+          final now = DateTime.now();
+          final today = trips.where((x) => x.date.year == now.year && x.date.month == now.month && x.date.day == now.day).toList();
+          final month = trips.where((x) => x.date.year == now.year && x.date.month == now.month).toList();
+          final paid = month.where((x) => x.paymentStatus == 'paid').fold<double>(0, (a,b) => a+b.amount);
+          final total = month.fold<double>(0, (a,b) => a+b.amount);
+          final delivered = today.where((x) => x.paymentStatus == 'paid').length;
+          final next = today.where((x) => x.paymentStatus != 'paid').firstOrNull;
+          return RefreshIndicator(
+            onRefresh: () async => setState(() => _trips = widget.repository.loadDriverTrips()),
+            child: ListView(padding: const EdgeInsets.fromLTRB(16,14,16,24), children: [
+              DashboardHeader(name: widget.profile.fullName, institution: 'فرشة', subtitle: 'السائق'),
+              const SizedBox(height: 16),
+              Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [
+                ProgressRing(value: today.isEmpty ? 0 : delivered/today.length, centerText: '${today.length}\nمشوار'),
+                const SizedBox(width: 18),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('مشاوير اليوم', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 6),
+                  Text('$delivered تم • ${today.length-delivered} متبقي', style: TextStyle(color: Colors.grey.shade700)),
+                ])),
+              ]))),
+              const SizedBox(height: 20),
+              const SectionTitle('المشوار القادم'),
+              if (next == null)
+                const EmptyState(title: 'لا توجد مشاوير متبقية اليوم', icon: Icons.task_alt)
+              else
+                Card(child: ListTile(contentPadding: const EdgeInsets.all(14), leading: const CircleAvatar(backgroundColor: Color(0xffE9F4EE), child: Icon(Icons.route, color: positiveGreen)), title: Text(next.institutionName, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('البائع: ${next.sellerName}\n${next.date.toLocal().toString().substring(0,10)}'), trailing: Text(farshaMoney(next.amount), style: const TextStyle(fontWeight: FontWeight.w800)))),
+              const SizedBox(height: 20),
+              const SectionTitle('حسابي هذا الشهر'),
+              KpiGrid(children: [
+                KpiCard(title:'إجمالي المستحق',value:farshaMoney(total),icon:Icons.account_balance_wallet_outlined,accent:infoBlue),
+                KpiCard(title:'المدفوع',value:farshaMoney(paid),icon:Icons.check_circle_outline,accent:positiveGreen),
+                KpiCard(title:'المتبقي',value:farshaMoney(total-paid),icon:Icons.schedule,accent:warningOrange),
+                KpiCard(title:'عدد المشاوير',value:month.length.toString(),icon:Icons.route_outlined,accent:partnerPurple),
+              ]),
+              const SizedBox(height: 20),
+              const SectionTitle('سجل المشاوير'),
+              if (trips.isEmpty) const EmptyState(title:'لا توجد مشاوير مسجلة حتى الآن',icon:Icons.route_outlined) else ...trips.take(20).map((trip)=>ListTile(contentPadding:EdgeInsets.zero,leading:Icon(trip.paymentStatus=='paid'?Icons.check_circle:Icons.route,color:trip.paymentStatus=='paid'?positiveGreen:null),title:Text(trip.institutionName),subtitle:Text('${trip.sellerName} • ${trip.date.toLocal().toString().substring(0,10)}'),trailing:Text(farshaMoney(trip.amount),style:const TextStyle(fontWeight:FontWeight.w800)))),
+            ]),
+          );
+        },
+      ),
+    ),
+  );
 }
 
 class SignOutButton extends StatelessWidget {
