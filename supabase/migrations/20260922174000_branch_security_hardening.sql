@@ -22,7 +22,7 @@ create policy supplier_deliveries_read on public.supplier_deliveries for select 
 drop policy if exists inventory_movements_read on public.inventory_movements;
 create policy inventory_movements_read on public.inventory_movements for select to authenticated using(public.can_access_branch(branch_id));
 drop policy if exists seller_ledger_read on public.seller_ledger;
-create policy seller_ledger_read on public.seller_ledger for select to authenticated using((user_id=(select auth.uid()) and (branch_id is null or public.can_access_branch(branch_id))) or (branch_id is not null and public.can_access_branch(branch_id) and public.has_institution_role(institution_id,array['owner','accountant']::public.institution_role[])));
+create policy seller_ledger_read on public.seller_ledger for select to authenticated using((seller_id=(select auth.uid()) and (branch_id is null or public.can_access_branch(branch_id))) or (branch_id is not null and public.can_access_branch(branch_id) and public.has_institution_role(institution_id,array['owner','accountant']::public.institution_role[])));
 drop policy if exists supplier_account_entries_read on public.supplier_account_entries;
 create policy supplier_account_entries_read on public.supplier_account_entries for select to authenticated using(public.has_institution_role(institution_id,array['owner','accountant']::public.institution_role[]) and (branch_id is null or public.can_access_branch(branch_id)));
 drop policy if exists driver_account_entries_read on public.driver_account_entries;
