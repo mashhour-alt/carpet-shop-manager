@@ -22,7 +22,55 @@ class PartnerDashboardBody extends StatelessWidget{const PartnerDashboardBody({s
 
 class FinancialFocus extends StatelessWidget{const FinancialFocus({super.key,required this.repository,required this.membership,required this.range});final FarshaRepository repository;final InstitutionMembership membership;final DashboardRange range;@override Widget build(BuildContext c)=>FutureBuilder<List<List<AccountSummaryRecord>>>(future:Future.wait([repository.loadDashboardDues(membership.institutionId,'supplier',range.from,range.to),repository.loadDashboardDues(membership.institutionId,'driver',range.from,range.to),repository.loadDashboardDues(membership.institutionId,'seller',range.from,range.to)]),builder:(c,s){if(!s.hasData)return const LinearProgressIndicator();double due(List<AccountSummaryRecord> x)=>x.fold(0,(a,b)=>a+b.balance);return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[const SectionTitle('التركيز المالي اليومي'),KpiGrid(children:[KpiCard(title:'مستحق الموردين',value:farshaMoney(due(s.data![0])),icon:Icons.local_shipping_outlined,accent:farshaOrange),KpiCard(title:'مستحق السائقين',value:farshaMoney(due(s.data![1])),icon:Icons.route_outlined,accent:farshaBlue),KpiCard(title:'مستحق البائعين',value:farshaMoney(due(s.data![2])),icon:Icons.people_outline,accent:farshaPurple)])]);});}
 class PartnerReadOnlyHub extends StatelessWidget{const PartnerReadOnlyHub({super.key,required this.membership,required this.repository,required this.title,required this.mode});final InstitutionMembership membership;final FarshaRepository repository;final String title,mode;@override Widget build(BuildContext c)=>FutureBuilder<PartnerContextRecord?>(future:repository.loadMyPartnerContext(membership.institutionId),builder:(c,s){if(!s.hasData)return const DashboardSkeleton();final p=s.data!;return ListView(padding:const EdgeInsets.all(16),children:[HubHeader(title:title,subtitle:'عرض فقط حسب نطاق الشراكة والصلاحيات'),if(mode=='branches')...[...p.scopes.map((x)=>Card(child:ListTile(leading:const Icon(Icons.storefront_outlined,color:farshaPurple),title:Text(x.scope=='institution'?'المؤسسة كاملة':x.branchName),subtitle:Text('الاستحقاق الحالي '+x.currentPercentage.toStringAsFixed(1)+'%'))))]else const DashboardEmptyState(message:'تفاصيل الأداء تظهر في الرئيسية حسب نطاق الشراكة. لا توجد إجراءات بيع متاحة للشريك من هذه الصفحة.',icon:Icons.visibility_outlined)]);});}
-class PartnerAccountHub extends StatelessWidget{const PartnerAccountHub({super.key,required this.membership,required this.repository});final InstitutionMembership membership;final FarshaRepository repository;@override Widget build(BuildContext c){final n=DateTime.now(),from=DateTime(n.year,n.month,1),to=DateTime(n.year,n.month+1,1);return FutureBuilder<PartnerContextRecord?>(future:repository.loadMyPartnerContext(membership.institutionId),builder:(c,s){if(!s.hasData)return const DashboardSkeleton();final p=s.data!;return FutureBuilder<List<PartnerLedgerRecord>>(future:repository.loadPartnerLedger(membership.institutionId,p.partnerId,from,to),builder:(c,l){if(!l.hasData)return const DashboardSkeleton();return ListView(padding:const EdgeInsets.all(16),children:[const HubHeader(title:'حساب الشريك',subtitle:'حركات الشهر الحالي'),if(l.data!.isEmpty)const DashboardEmptyState(message:'لا توجد حركات حساب هذا الشهر')else ...l.data!.map((x)=>Card(child:ListTile(title:Text(x.kind),subtitle:Text(x.notes.isEmpty?x.createdAt.toLocal().toString().substring(0,16):x.notes),trailing:Text(farshaMoney(x.amount),style:const TextStyle(fontWeight:FontWeight.w800))))]);});});}}
+class PartnerAccountHub extends StatelessWidget {
+  const PartnerAccountHub({super.key, required this.membership, required this.repository});
+  final InstitutionMembership membership;
+  final FarshaRepository repository;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final from = DateTime(now.year, now.month, 1);
+    final to = DateTime(now.year, now.month + 1, 1);
+    return FutureBuilder<PartnerContextRecord?>(
+      future: repository.loadMyPartnerContext(membership.institutionId),
+      builder: (context, partnerSnapshot) {
+        if (!partnerSnapshot.hasData) return const DashboardSkeleton();
+        final partner = partnerSnapshot.data!;
+        return FutureBuilder<List<PartnerLedgerRecord>>(
+          future: repository.loadPartnerLedger(membership.institutionId, partner.partnerId, from, to),
+          builder: (context, ledgerSnapshot) {
+            if (!ledgerSnapshot.hasData) return const DashboardSkeleton();
+            final ledger = ledgerSnapshot.data!;
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                const HubHeader(title: 'حساب الشريك', subtitle: 'حركات الشهر الحالي'),
+                if (ledger.isEmpty)
+                  const DashboardEmptyState(message: 'لا توجد حركات حساب هذا الشهر')
+                else
+                  ...ledger.map(
+                    (entry) => Card(
+                      child: ListTile(
+                        title: Text(entry.kind),
+                        subtitle: Text(entry.notes.isEmpty
+                            ? entry.createdAt.toLocal().toString().substring(0, 16)
+                            : entry.notes),
+                        trailing: Text(
+                          farshaMoney(entry.amount),
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
 
 class SalesHub extends StatelessWidget{const SalesHub({super.key,required this.membership,required this.repository});final InstitutionMembership membership;final FarshaRepository repository;@override Widget build(BuildContext c)=>DefaultTabController(length:3,child:Column(children:[const HubHeader(title:'البيع',subtitle:'البيع والمستندات في مكان واحد'),const Material(color:Colors.transparent,child:TabBar(isScrollable:true,tabs:[Tab(text:'بيعة جديدة'),Tab(text:'عروض وفواتير'),Tab(text:'سجل المبيعات')])),Expanded(child:TabBarView(children:[SalesSettlementPage(membership:membership,repository:repository),DocumentsPage(membership:membership,repository:repository),OperatingReportsPage(membership:membership,repository:repository)]))]));}
 class InventoryHub extends StatelessWidget{const InventoryHub({super.key,required this.membership,required this.repository});final InstitutionMembership membership;final FarshaRepository repository;@override Widget build(BuildContext c){final manager=membership.role!=InstitutionRole.seller&&membership.role!=InstitutionRole.partner;return DefaultTabController(length:manager?2:1,child:Column(children:[const HubHeader(title:'المخزون',subtitle:'الصنف ← اللون ← الأمتار الطولية'),if(manager)const Material(color:Colors.transparent,child:TabBar(tabs:[Tab(text:'الموكيت والأرضيات'),Tab(text:'المستلزمات')])),Expanded(child:manager?TabBarView(children:[InstitutionOperationsPage(membership:membership,repository:repository),MaterialsPage(membership:membership,repository:repository)]):InstitutionOperationsPage(membership:membership,repository:repository))]));}}
