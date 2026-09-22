@@ -25,6 +25,24 @@ class FarshaRepository {
         .toList();
   }
 
+  Future<List<InstitutionMembership>> loadPartnerMemberships() async {
+    final rows = await client
+        .from('partners')
+        .select('institution_id,status,institutions(name)')
+        .eq('user_id', userId)
+        .eq('status', 'active');
+    return (rows as List).map((row) {
+      final map = row as Map<String, dynamic>;
+      final institution = map['institutions'] as Map<String, dynamic>;
+      return InstitutionMembership(
+        institutionId: map['institution_id'] as String,
+        institutionName: institution['name'] as String,
+        role: InstitutionRole.partner,
+        status: map['status'] as String,
+      );
+    }).toList();
+  }
+
   Future<String> createInstitution({
     required String name,
     required String commercialRegistration,
