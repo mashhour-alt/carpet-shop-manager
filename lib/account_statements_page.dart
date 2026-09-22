@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'cloud_models.dart';
 import 'farsha_repository.dart';
+import 'ui_v2_components.dart';
 const sar='⃁';
 String money(double v)=>sar+' '+v.toStringAsFixed(2);
 class AccountStatementsPage extends StatefulWidget{
@@ -9,19 +10,20 @@ class AccountStatementsPage extends StatefulWidget{
  @override State<AccountStatementsPage> createState()=>_AccountStatementsPageState();
 }
 class _AccountStatementsPageState extends State<AccountStatementsPage>{
- String party='seller';String range='month';final search=TextEditingController();
- (DateTime,DateTime) dates(){final n=DateTime.now(),d=DateTime(DateTime.now().year,DateTime.now().month,DateTime.now().day);return switch(range){'today'=>(d,d.add(const Duration(days:1))),'week'=>(d.subtract(Duration(days:d.weekday-1)),d.add(const Duration(days:1))),'previous'=>(DateTime(n.year,n.month-1,1),DateTime(n.year,n.month,1)),_=>(DateTime(n.year,n.month,1),DateTime(n.year,n.month+1,1))};}
+ String party='seller';String range='month';DateTimeRange? customRange;final search=TextEditingController();
+ (DateTime,DateTime) dates(){final n=DateTime.now(),d=DateTime(DateTime.now().year,DateTime.now().month,DateTime.now().day);return switch(range){'today'=>(d,d.add(const Duration(days:1))),'week'=>(d.subtract(Duration(days:d.weekday-1)),d.add(const Duration(days:1))),'previous'=>(DateTime(n.year,n.month-1,1),DateTime(n.year,n.month,1)),'custom'=>(customRange?.start??d,(customRange?.end??d).add(const Duration(days:1))),_=>(DateTime(n.year,n.month,1),DateTime(n.year,n.month+1,1))};}
  @override void dispose(){search.dispose();super.dispose();}
  @override Widget build(BuildContext context){
   if(widget.personalSeller)return StatementDetailPage(membership:widget.membership,repository:widget.repository,party:'seller',partyId:widget.repository.userId,partyName:'حسابي',from:dates().$1,to:dates().$2,allowEntry:false);
   return Column(children:[
    Padding(padding:const EdgeInsets.all(12),child:SegmentedButton<String>(segments:const [ButtonSegment(value:'seller',label:Text('البائعون')),ButtonSegment(value:'driver',label:Text('السائقون')),ButtonSegment(value:'supplier',label:Text('الموردون'))],selected:{party},onSelectionChanged:(v)=>setState(()=>party=v.first))),
-   Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:Row(children:[Expanded(child:DropdownButtonFormField<String>(initialValue:range,decoration:const InputDecoration(labelText:'الفترة'),items:const [DropdownMenuItem(value:'today',child:Text('اليوم')),DropdownMenuItem(value:'week',child:Text('هذا الأسبوع')),DropdownMenuItem(value:'month',child:Text('هذا الشهر')),DropdownMenuItem(value:'previous',child:Text('الشهر السابق'))],onChanged:(v)=>setState(()=>range=v!))),const SizedBox(width:8),Expanded(child:TextField(controller:search,onChanged:(_)=>setState((){}),decoration:const InputDecoration(labelText:'بحث بالاسم',prefixIcon:Icon(Icons.search))))])),
+   Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:Row(children:[Expanded(child:DropdownButtonFormField<String>(initialValue:range,decoration:const InputDecoration(labelText:'الفترة'),items:const [DropdownMenuItem(value:'today',child:Text('اليوم')),DropdownMenuItem(value:'week',child:Text('هذا الأسبوع')),DropdownMenuItem(value:'month',child:Text('هذا الشهر')),DropdownMenuItem(value:'previous',child:Text('الشهر السابق')),DropdownMenuItem(value:'custom',child:Text('فترة مخصصة'))],onChanged:(v)async{if(v=='custom'){final now=DateTime.now();final picked=await showDateRangePicker(context:context,firstDate:DateTime(now.year-5),lastDate:DateTime(now.year+1));if(picked==null)return;customRange=picked;}setState(()=>range=v!);})),const SizedBox(width:8),Expanded(child:TextField(controller:search,onChanged:(_)=>setState((){}),decoration:const InputDecoration(labelText:'بحث بالاسم',prefixIcon:Icon(Icons.search))))])),
    Expanded(child:FutureBuilder<List<AccountSummaryRecord>>(
      future:widget.repository.loadAccountSummaries(widget.membership.institutionId,party,dates().$1,dates().$2),
      builder:(c,s){
        if(!s.hasData)return const Center(child:CircularProgressIndicator());
        final rows=s.data!.where((x)=>x.name.contains(search.text.trim())).toList();
+       if(rows.isEmpty)return const Padding(padding:EdgeInsets.all(12),child:EmptyState(title:'لا توجد حركات أو أرصدة في هذه الفترة',icon:Icons.account_balance_wallet_outlined));
        return ListView(padding:const EdgeInsets.all(12),children:rows.map<Widget>((x){
          final subtitle=(party=='seller'?x.count.toString()+' عملية • مستحق ':party=='driver'?x.count.toString()+' مشوار • الإجمالي ':x.count.toString()+' توريد • ورد ')+money(x.gross)+' • مدفوع '+money(x.paid);
          return Card(child:ListTile(title:Text(x.name,style:const TextStyle(fontWeight:FontWeight.bold)),subtitle:Text(subtitle),trailing:Text('المتبقي\\n'+money(x.balance),textAlign:TextAlign.center),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>StatementDetailPage(membership:widget.membership,repository:widget.repository,party:party,partyId:x.id,partyName:x.name,from:dates().$1,to:dates().$2,allowEntry:true)))));
