@@ -417,6 +417,22 @@ class InvoiceFinancialSnapshot {
   }
 }
 
+class InvoiceFinancialPresentation {
+  const InvoiceFinancialPresentation._(this.snapshot);
+  factory InvoiceFinancialPresentation.fromSnapshot(InvoiceFinancialSnapshot snapshot) =>
+      InvoiceFinancialPresentation._(snapshot);
+  final InvoiceFinancialSnapshot snapshot;
+  List<InvoiceLineRecord> get lines => snapshot.lines;
+  InvoiceFinancialPresentation get presentation =>
+      InvoiceFinancialPresentation.fromSnapshot(snapshot);
+
+  double get subtotal => snapshot.lineExtensionAmount;
+  double get discount => snapshot.discountAmount;
+  double get taxable => snapshot.taxExclusiveAmount;
+  double get vat => snapshot.vatAmount;
+  double get total => snapshot.payableAmount;
+}
+
 class TaxInvoiceRecord {
   const TaxInvoiceRecord({
     required this.id,
