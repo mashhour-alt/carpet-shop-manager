@@ -423,9 +423,6 @@ class InvoiceFinancialPresentation {
       InvoiceFinancialPresentation._(snapshot);
   final InvoiceFinancialSnapshot snapshot;
   List<InvoiceLineRecord> get lines => snapshot.lines;
-  InvoiceFinancialPresentation get presentation =>
-      InvoiceFinancialPresentation.fromSnapshot(snapshot);
-
   double get subtotal => snapshot.lineExtensionAmount;
   double get discount => snapshot.discountAmount;
   double get taxable => snapshot.taxExclusiveAmount;
@@ -477,6 +474,9 @@ class TaxInvoiceRecord {
   final String paymentSummary;
   final DateTime issuedAt;
   final InvoiceFinancialSnapshot snapshot;
+
+  InvoiceFinancialPresentation get presentation =>
+      InvoiceFinancialPresentation.fromSnapshot(snapshot);
 
   double get subtotal => snapshot.lineExtensionAmount;
   double get discountAmount => snapshot.discountAmount;
