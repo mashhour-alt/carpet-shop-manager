@@ -77,7 +77,8 @@ class _InvoicesPageState extends State<InvoicesPage> {
     final commercialRegistration = TextEditingController();
     final taxNumber = TextEditingController();
     final customerAddress = TextEditingController();
-    final discount = TextEditingController(text: '0');
+    final selectedSale = available.first;
+    final discount = TextEditingController(text: selectedSale.discountAmount.toStringAsFixed(2));
 
     final save = await showDialog<bool>(
       context: context,
@@ -113,13 +114,15 @@ class _InvoicesPageState extends State<InvoicesPage> {
                         (sale) => DropdownMenuItem(
                           value: sale.id,
                           child: Text(
-                            '${sale.itemName} • ${sale.color} • ${_money(sale.total)} ⃁',
+                            '${sale.itemName} • ${sale.color} • ${_money(sale.payableAmount)} ⃁',
                           ),
                         ),
                       )
                       .toList(),
                   onChanged: (value) {
                     setDialogState(() => saleId = value!);
+                    final selected = available.firstWhere((sale) => sale.id == value);
+                    discount.text = selected.discountAmount.toStringAsFixed(2);
                     customer.text = available
                         .firstWhere((sale) => sale.id == value)
                         .customerName;
@@ -152,6 +155,7 @@ class _InvoicesPageState extends State<InvoicesPage> {
                 const SizedBox(height: 10),
                 TextField(
                   controller: discount,
+                  readOnly: available.firstWhere((sale) => sale.id == saleId).financialSnapshotVersion >= 2,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
