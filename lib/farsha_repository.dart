@@ -44,6 +44,18 @@ class FarshaRepository {
     return result as String;
   }
 
+  Future<Map<String,dynamic>> loadZatcaInstitutionAddress(String institutionId) async {
+    final row=await client.from('institutions').select('zatca_street_name,zatca_building_number,zatca_district,zatca_city,zatca_postal_code,zatca_country_code').eq('id',institutionId).single();
+    return Map<String,dynamic>.from(row);
+  }
+
+  Future<void> updateZatcaInstitutionAddress({required String institutionId,required String street,required String buildingNumber,required String district,required String city,required String postalCode,String countryCode='SA'}) async {
+    for(final entry in {'اسم الشارع':street,'رقم المبنى':buildingNumber,'الحي':district,'المدينة':city,'الرمز البريدي':postalCode,'رمز الدولة':countryCode}.entries){
+      if(entry.value.trim().isEmpty) throw ArgumentError('بيانات ZATCA ناقصة: ${entry.key}');
+    }
+    await client.from('institutions').update({'zatca_street_name':street.trim(),'zatca_building_number':buildingNumber.trim(),'zatca_district':district.trim(),'zatca_city':city.trim(),'zatca_postal_code':postalCode.trim(),'zatca_country_code':countryCode.trim().toUpperCase()}).eq('id',institutionId);
+  }
+
   Future<String> claimInvitation(String code) async {
     final result = await client.rpc(
       'claim_institution_invitation',
