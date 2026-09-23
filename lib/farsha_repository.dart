@@ -332,7 +332,7 @@ class FarshaRepository {
   Future<List<SaleInvoiceCandidate>> loadSalesForInvoicing(String institutionId) async {
     final rows = await client
         .from('sales')
-        .select('id,customer_name,total,created_at,inventory_items(name,color),invoices(id)')
+        .select('id,customer_name,total,created_at,financial_snapshot_version,discount_amount,payable_amount,inventory_items(name,color),invoices(id)')
         .eq('institution_id', institutionId)
         .order('created_at', ascending: false);
     return (rows as List)
@@ -377,11 +377,11 @@ class FarshaRepository {
     return (rows as List).map((e)=>AddonTypeRecord.fromMap(e as Map<String,dynamic>)).toList();
   }
 
-  Future<String> recordSaleV2({required String institutionId,required String inventoryId,required String sellerId,String? driverId,required String customerName,required double length,required double salePrice,required double driverFee,required String notes,required List<SalePaymentInput> payments,required List<SaleAddonInput> addons}) async {
-    final result=await client.rpc('record_sale_v2',params:{
+  Future<String> recordSaleV2({required String institutionId,required String inventoryId,required String sellerId,String? driverId,required String customerName,required double length,required double salePrice,required double driverFee,required String notes,required List<SalePaymentInput> payments,required List<SaleAddonInput> addons,double discount=0}) async {
+    final result=await client.rpc('record_sale_financial_v2',params:{
       'p_institution_id':institutionId,'p_inventory_id':inventoryId,'p_seller_id':sellerId,'p_driver_id':driverId,
       'p_customer_name':customerName.trim(),'p_length':length,'p_sale_price':salePrice,'p_driver_fee':driverFee,'p_notes':notes.trim(),
-      'p_payments':payments.map((e)=>e.toMap()).toList(),'p_addons':addons.map((e)=>e.toMap()).toList(),
+      'p_payments':payments.map((e)=>e.toMap()).toList(),'p_addons':addons.map((e)=>e.toMap()).toList(),'p_discount':discount,
     });
     return result as String;
   }
