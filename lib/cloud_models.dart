@@ -299,6 +299,9 @@ class SaleInvoiceCandidate {
     required this.createdAt,
     required this.total,
     this.invoiceId,
+    required this.financialSnapshotVersion,
+    required this.discountAmount,
+    required this.payableAmount,
   });
 
   final String id;
@@ -308,6 +311,9 @@ class SaleInvoiceCandidate {
   final DateTime createdAt;
   final double total;
   final String? invoiceId;
+  final int financialSnapshotVersion;
+  final double discountAmount;
+  final double payableAmount;
   bool get hasInvoice => invoiceId != null;
 
   factory SaleInvoiceCandidate.fromMap(Map<String, dynamic> map) {
@@ -327,6 +333,9 @@ class SaleInvoiceCandidate {
       createdAt: DateTime.parse(map['created_at'] as String),
       total: (map['total'] as num).toDouble(),
       invoiceId: invoiceId,
+      financialSnapshotVersion: (map['financial_snapshot_version'] as num?)?.toInt() ?? 1,
+      discountAmount: (map['discount_amount'] as num?)?.toDouble() ?? 0,
+      payableAmount: (map['payable_amount'] as num?)?.toDouble() ?? (map['total'] as num).toDouble(),
     );
   }
 }
