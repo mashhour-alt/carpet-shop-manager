@@ -670,7 +670,7 @@ class _ItemRow extends StatelessWidget {
   const _ItemRow({required this.index, required this.line});
 
   final int index;
-  final _InvoiceLine line;
+  final InvoiceLineRecord line;
 
   @override
   Widget build(BuildContext context) => Container(
