@@ -364,7 +364,7 @@ class FarshaRepository {
   Future<List<TaxInvoiceRecord>> loadTaxInvoices(String institutionId) async {
     final rows = await client
         .from('invoices')
-        .select('id,invoice_number,invoice_kind,seller_name,customer_name,customer_commercial_registration,customer_tax_number,customer_address,item_name,color,length,width,area,price_per_sqm,carpet_amount,installation_amount,glue_gallons,glue_amount,iron_pieces,iron_amount,driver_fee,payment_method,payment_summary,addons_summary,addons_amount,subtotal,discount_amount,taxable_amount,vat_amount,total_with_vat,issued_at')
+        .select('id,invoice_number,invoice_kind,seller_name,customer_name,customer_commercial_registration,customer_tax_number,customer_address,item_name,color,length,width,area,price_per_sqm,carpet_amount,driver_fee,payment_method,payment_summary,discount_amount,vat_amount,issued_at,currency_code,tax_category,financial_snapshot_version,line_extension_amount,tax_exclusive_amount,tax_inclusive_amount,payable_amount,invoice_lines(line_no,source_kind,description,quantity,unit_code,unit_price,gross_amount,discount_amount,taxable_amount,tax_category,vat_rate,vat_amount,total_with_vat)')
         .eq('institution_id', institutionId)
         .order('issued_at', ascending: false);
     return (rows as List)
