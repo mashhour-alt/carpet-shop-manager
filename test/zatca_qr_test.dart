@@ -22,10 +22,10 @@ void main() {
     expect(s.vatAmount,15); expect(s.payableAmount,115); expect(s.isInternallyConsistent,isTrue);
   });
 
-  test('split payment does not recalculate invoice financial snapshot',(){
+  test('split payments equal canonical payable including VAT',(){
     final s=snapshot([line(1,1000,100,135)]);
-    const payments=[400.0,600.0];
-    expect(payments.reduce((a,b)=>a+b),s.lineExtensionAmount);
+    const payments=[400.0,635.0];
+    expect(payments.reduce((a,b)=>a+b),s.payableAmount);
     expect(s.lineExtensionAmount,1000); expect(s.discountAmount,100); expect(s.taxExclusiveAmount,900); expect(s.vatAmount,135);
   });
 
