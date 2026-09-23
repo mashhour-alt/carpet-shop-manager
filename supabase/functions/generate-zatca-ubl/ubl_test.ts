@@ -13,3 +13,5 @@ Deno.test("parity mismatch blocks XML",()=>{let ok=false;try{build(base({vat_amo
 
 Deno.test("standard rejects missing structured buyer address",()=>{let ok=false;try{build(base({invoice_kind:"tax",customer_name:"Buyer",customer_tax_number:"310000000000011",buyer_street_snapshot:null}),[line()])}catch(e){ok=String(e).includes("buyer street name")}assert(ok,"structured buyer address required")});
 Deno.test("Farsha gross snapshot mismatch blocks XML",()=>{let ok=false;try{build(base({line_extension_amount:99}),[line()])}catch{ok=true}assert(ok,"gross parity must be preserved")});
+
+Deno.test("UBL LegalMonetaryTotal LineExtension is sum of net invoice lines",()=>{const i=base({line_extension_amount:100,discount_amount:10,tax_exclusive_amount:90,vat_amount:13.5,tax_inclusive_amount:103.5,payable_amount:103.5});const xml=build(i,[line({discount_amount:10,taxable_amount:90,vat_amount:13.5,total_with_vat:103.5})]);assert(xml.includes("<cac:LegalMonetaryTotal><cbc:LineExtensionAmount currencyID=\"SAR\">90.00</cbc:LineExtensionAmount>"),"UBL line extension must be net")});
