@@ -195,7 +195,7 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
     final seller=widget.membership.role==InstitutionRole.seller?widget.repository.userId:sellerId;
     final item=items.where((e)=>e.id==inventoryId).firstOrNull;
     if(item==null||seller==null||n(length)<=0||n(length)>item.remainingLength||n(price)<0)return msg('راجع القطعة والطول والسعر');
-    final g=gross(items),d=n(discount),tx=taxable(items),v=vat(items),p=payable(items),paid=payments.fold<double>(0,(a,b)=>a+b.amount);
+    final g=gross(items),d=n(discount),p=payable(items),paid=payments.fold<double>(0,(a,b)=>a+b.amount);
     if(d<0||d>g)return msg('الخصم يجب أن يكون بين صفر والإجمالي قبل الخصم');
     if((paid-p).abs()>.009)return msg('إجمالي الدفعات '+paid.toStringAsFixed(2)+' لا يساوي المبلغ المستحق شامل الضريبة '+p.toStringAsFixed(2));
     setState(()=>busy=true);
