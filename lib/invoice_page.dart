@@ -283,7 +283,7 @@ class _InvoicesPageState extends State<InvoicesPage> {
                       ),
                       subtitle: Text(
                         '${invoice.customerName} • ${_invoiceDate(invoice.issuedAt)}\n'
-                        '${_money(_financial.total)} ⃁ شامل الضريبة',
+                        '${_money(invoice.presentation.total)} ⃁ شامل الضريبة',
                       ),
                       trailing: const Icon(Icons.open_in_new),
                     ),
