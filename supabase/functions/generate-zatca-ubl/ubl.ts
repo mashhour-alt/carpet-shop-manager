@@ -20,7 +20,7 @@ export function validate(i:any,lines:any[]){
  }
  const sum=(k:string)=>lines.reduce((a,l)=>a+Number(l[k]),0);
  const eq=(a:number,b:number)=>Math.abs(a-b)<0.009;
- if(!eq(sum("taxable_amount"),Number(i.tax_exclusive_amount)))fail("Invoice line taxable parity failed");
+ if(!eq(sum("gross_amount"),Number(i.line_extension_amount)))fail("Invoice gross parity failed");\n if(!eq(sum("taxable_amount"),Number(i.tax_exclusive_amount)))fail("Invoice line taxable parity failed");
  if(!eq(sum("discount_amount"),Number(i.discount_amount)))fail("Invoice discount parity failed");
 
  if(!eq(sum("vat_amount"),Number(i.vat_amount)))fail("Invoice VAT parity failed");
