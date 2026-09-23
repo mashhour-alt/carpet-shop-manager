@@ -38,6 +38,21 @@ void main() {
     expect(fields[5],s.vatAmount.toStringAsFixed(2));
   });
 
+  test('PDF presentation inputs equal invoice snapshot and QR monetary inputs',(){
+    final s=snapshot([line(1,800,20,117),line(2,100,5,14.25)]);
+    final pdf=InvoiceFinancialPresentation.fromSnapshot(s);
+    final payload=buildZatcaQrPayloadFromSnapshot(sellerName:'Test',sellerVatNumber:'310123456700003',issuedAt:DateTime.utc(2026,9,23),snapshot:s);
+    final qr=decodeZatcaQrPayload(payload);
+    expect(pdf.lines,s.lines);
+    expect(pdf.subtotal,s.lineExtensionAmount);
+    expect(pdf.discount,s.discountAmount);
+    expect(pdf.taxable,s.taxExclusiveAmount);
+    expect(pdf.vat,s.vatAmount);
+    expect(pdf.total,s.payableAmount);
+    expect(qr[4],pdf.total.toStringAsFixed(2));
+    expect(qr[5],pdf.vat.toStringAsFixed(2));
+  });
+
   test('parity guard detects a mismatched snapshot',(){
     final good=snapshot([line(1,100,0,15)]);
     final bad=InvoiceFinancialSnapshot(version:2,currencyCode:'SAR',taxCategory:'S',lineExtensionAmount:good.lineExtensionAmount,discountAmount:0,taxExclusiveAmount:100,vatAmount:14.99,taxInclusiveAmount:115,payableAmount:115,lines:good.lines);
