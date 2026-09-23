@@ -331,6 +331,92 @@ class SaleInvoiceCandidate {
   }
 }
 
+class InvoiceLineRecord {
+  const InvoiceLineRecord({
+    required this.lineNo,
+    required this.sourceKind,
+    required this.description,
+    required this.quantity,
+    required this.unitCode,
+    required this.unitPrice,
+    required this.grossAmount,
+    required this.discountAmount,
+    required this.taxableAmount,
+    required this.taxCategory,
+    required this.vatRate,
+    required this.vatAmount,
+    required this.totalWithVat,
+  });
+
+  final int lineNo;
+  final String sourceKind;
+  final String description;
+  final double quantity;
+  final String unitCode;
+  final double unitPrice;
+  final double grossAmount;
+  final double discountAmount;
+  final double taxableAmount;
+  final String taxCategory;
+  final double vatRate;
+  final double vatAmount;
+  final double totalWithVat;
+
+  factory InvoiceLineRecord.fromMap(Map<String, dynamic> map) => InvoiceLineRecord(
+        lineNo: (map['line_no'] as num).toInt(),
+        sourceKind: map['source_kind'] as String,
+        description: map['description'] as String,
+        quantity: (map['quantity'] as num).toDouble(),
+        unitCode: map['unit_code'] as String,
+        unitPrice: (map['unit_price'] as num).toDouble(),
+        grossAmount: (map['gross_amount'] as num).toDouble(),
+        discountAmount: (map['discount_amount'] as num).toDouble(),
+        taxableAmount: (map['taxable_amount'] as num).toDouble(),
+        taxCategory: map['tax_category'] as String,
+        vatRate: (map['vat_rate'] as num).toDouble(),
+        vatAmount: (map['vat_amount'] as num).toDouble(),
+        totalWithVat: (map['total_with_vat'] as num).toDouble(),
+      );
+}
+
+class InvoiceFinancialSnapshot {
+  const InvoiceFinancialSnapshot({
+    required this.version,
+    required this.currencyCode,
+    required this.taxCategory,
+    required this.lineExtensionAmount,
+    required this.discountAmount,
+    required this.taxExclusiveAmount,
+    required this.vatAmount,
+    required this.taxInclusiveAmount,
+    required this.payableAmount,
+    required this.lines,
+  });
+
+  final int version;
+  final String currencyCode;
+  final String taxCategory;
+  final double lineExtensionAmount;
+  final double discountAmount;
+  final double taxExclusiveAmount;
+  final double vatAmount;
+  final double taxInclusiveAmount;
+  final double payableAmount;
+  final List<InvoiceLineRecord> lines;
+
+  bool get isInternallyConsistent {
+    double sum(double Function(InvoiceLineRecord line) pick) =>
+        lines.fold<double>(0, (value, line) => value + pick(line));
+    bool eq(double a, double b) => ((a - b).abs() < .005);
+    return eq(sum((x) => x.grossAmount), lineExtensionAmount) &&
+        eq(sum((x) => x.discountAmount), discountAmount) &&
+        eq(sum((x) => x.taxableAmount), taxExclusiveAmount) &&
+        eq(sum((x) => x.vatAmount), vatAmount) &&
+        eq(sum((x) => x.totalWithVat), taxInclusiveAmount) &&
+        eq(taxInclusiveAmount, payableAmount);
+  }
+}
+
 class TaxInvoiceRecord {
   const TaxInvoiceRecord({
     required this.id,
@@ -348,22 +434,11 @@ class TaxInvoiceRecord {
     required this.area,
     required this.pricePerSquareMeter,
     required this.carpetAmount,
-    required this.installationAmount,
-    required this.glueGallons,
-    required this.glueAmount,
-    required this.ironPieces,
-    required this.ironAmount,
     required this.driverFee,
     required this.paymentMethod,
     required this.paymentSummary,
-    required this.addonsSummary,
-    required this.addonsAmount,
-    required this.subtotal,
-    required this.discountAmount,
-    required this.taxableAmount,
-    required this.vatAmount,
-    required this.totalWithVat,
     required this.issuedAt,
+    required this.snapshot,
   });
 
   final String id;
@@ -381,56 +456,58 @@ class TaxInvoiceRecord {
   final double area;
   final double pricePerSquareMeter;
   final double carpetAmount;
-  final double installationAmount;
-  final double glueGallons;
-  final double glueAmount;
-  final double ironPieces;
-  final double ironAmount;
   final double driverFee;
   final String paymentMethod;
   final String paymentSummary;
-  final String addonsSummary;
-  final double addonsAmount;
-  final double subtotal;
-  final double discountAmount;
-  final double taxableAmount;
-  final double vatAmount;
-  final double totalWithVat;
   final DateTime issuedAt;
+  final InvoiceFinancialSnapshot snapshot;
 
-  factory TaxInvoiceRecord.fromMap(Map<String, dynamic> map) => TaxInvoiceRecord(
-        id: map['id'] as String,
-        invoiceNumber: (map['invoice_number'] as num).toInt(),
-        invoiceKind: map['invoice_kind'] as String,
-        sellerName: map['seller_name'] as String,
-        customerName: map['customer_name'] as String,
-        customerCommercialRegistration: map['customer_commercial_registration'] as String,
-        customerTaxNumber: map['customer_tax_number'] as String,
-        customerAddress: map['customer_address'] as String,
-        itemName: map['item_name'] as String,
-        color: map['color'] as String,
-        length: (map['length'] as num).toDouble(),
-        width: (map['width'] as num).toDouble(),
-        area: (map['area'] as num).toDouble(),
-        pricePerSquareMeter: (map['price_per_sqm'] as num).toDouble(),
-        carpetAmount: (map['carpet_amount'] as num).toDouble(),
-        installationAmount: (map['installation_amount'] as num).toDouble(),
-        glueGallons: (map['glue_gallons'] as num).toDouble(),
-        glueAmount: (map['glue_amount'] as num).toDouble(),
-        ironPieces: (map['iron_pieces'] as num).toDouble(),
-        ironAmount: (map['iron_amount'] as num).toDouble(),
-        driverFee: (map['driver_fee'] as num).toDouble(),
-        paymentMethod: map['payment_method'] as String,
-        paymentSummary: map['payment_summary'] as String? ?? '',
-        addonsSummary: map['addons_summary'] as String? ?? '',
-        addonsAmount: (map['addons_amount'] as num?)?.toDouble() ?? 0,
-        subtotal: (map['subtotal'] as num).toDouble(),
+  double get subtotal => snapshot.lineExtensionAmount;
+  double get discountAmount => snapshot.discountAmount;
+  double get taxableAmount => snapshot.taxExclusiveAmount;
+  double get vatAmount => snapshot.vatAmount;
+  double get totalWithVat => snapshot.payableAmount;
+
+  factory TaxInvoiceRecord.fromMap(Map<String, dynamic> map) {
+    final lines = (map['invoice_lines'] as List? ?? const [])
+        .map((row) => InvoiceLineRecord.fromMap(row as Map<String, dynamic>))
+        .toList()
+      ..sort((a, b) => a.lineNo.compareTo(b.lineNo));
+    return TaxInvoiceRecord(
+      id: map['id'] as String,
+      invoiceNumber: (map['invoice_number'] as num).toInt(),
+      invoiceKind: map['invoice_kind'] as String,
+      sellerName: map['seller_name'] as String,
+      customerName: map['customer_name'] as String,
+      customerCommercialRegistration:
+          map['customer_commercial_registration'] as String,
+      customerTaxNumber: map['customer_tax_number'] as String,
+      customerAddress: map['customer_address'] as String,
+      itemName: map['item_name'] as String,
+      color: map['color'] as String,
+      length: (map['length'] as num).toDouble(),
+      width: (map['width'] as num).toDouble(),
+      area: (map['area'] as num).toDouble(),
+      pricePerSquareMeter: (map['price_per_sqm'] as num).toDouble(),
+      carpetAmount: (map['carpet_amount'] as num).toDouble(),
+      driverFee: (map['driver_fee'] as num).toDouble(),
+      paymentMethod: map['payment_method'] as String,
+      paymentSummary: map['payment_summary'] as String? ?? '',
+      issuedAt: DateTime.parse(map['issued_at'] as String),
+      snapshot: InvoiceFinancialSnapshot(
+        version: (map['financial_snapshot_version'] as num).toInt(),
+        currencyCode: map['currency_code'] as String,
+        taxCategory: map['tax_category'] as String,
+        lineExtensionAmount: (map['line_extension_amount'] as num).toDouble(),
         discountAmount: (map['discount_amount'] as num).toDouble(),
-        taxableAmount: (map['taxable_amount'] as num).toDouble(),
+        taxExclusiveAmount: (map['tax_exclusive_amount'] as num).toDouble(),
         vatAmount: (map['vat_amount'] as num).toDouble(),
-        totalWithVat: (map['total_with_vat'] as num).toDouble(),
-        issuedAt: DateTime.parse(map['issued_at'] as String),
-      );
+        taxInclusiveAmount: (map['tax_inclusive_amount'] as num).toDouble(),
+        payableAmount: (map['payable_amount'] as num).toDouble(),
+        lines: lines,
+      ),
+    );
+  }
 }
 
 class AddonTypeRecord {
