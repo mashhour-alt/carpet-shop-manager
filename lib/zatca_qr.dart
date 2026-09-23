@@ -1,10 +1,25 @@
 import 'dart:convert';
 
+import 'cloud_models.dart';
+
 /// Builds the Base64 TLV payload required for Saudi e-invoices in Phase One.
 ///
 /// Tags 1-5 are seller name, seller VAT number, issue timestamp, total with
 /// VAT, and VAT total. Phase Two cryptographic tags must come from an actual
 /// ZATCA clearance/reporting integration and are intentionally not fabricated.
+String buildZatcaQrPayloadFromSnapshot({
+  required String sellerName,
+  required String sellerVatNumber,
+  required DateTime issuedAt,
+  required InvoiceFinancialSnapshot snapshot,
+}) => buildZatcaQrPayload(
+  sellerName: sellerName,
+  sellerVatNumber: sellerVatNumber,
+  issuedAt: issuedAt,
+  totalWithVat: snapshot.payableAmount,
+  vatAmount: snapshot.vatAmount,
+);
+
 String buildZatcaQrPayload({
   required String sellerName,
   required String sellerVatNumber,
