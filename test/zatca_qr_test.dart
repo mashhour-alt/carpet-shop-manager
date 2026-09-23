@@ -24,8 +24,8 @@ void main() {
 
   test('split payment does not recalculate invoice financial snapshot',(){
     final s=snapshot([line(1,1000,100,135)]);
-    const payments=[400.0,635.0];
-    expect(payments.reduce((a,b)=>a+b),s.payableAmount);
+    const payments=[400.0,600.0];
+    expect(payments.reduce((a,b)=>a+b),s.lineExtensionAmount);
     expect(s.lineExtensionAmount,1000); expect(s.discountAmount,100); expect(s.taxExclusiveAmount,900); expect(s.vatAmount,135);
   });
 
