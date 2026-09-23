@@ -221,6 +221,26 @@ class InstitutionDashboard extends StatefulWidget {
 class _InstitutionDashboardState extends State<InstitutionDashboard> {
   int _index = 0;
 
+  Future<void> _editZatcaAddress() async {
+    final current=await widget.repository.loadZatcaInstitutionAddress(widget.membership.institutionId);
+    if(!mounted)return;
+    TextEditingController ctrl(String key)=>TextEditingController(text:(current[key]??'').toString());
+    final street=ctrl('zatca_street_name'),building=ctrl('zatca_building_number'),district=ctrl('zatca_district'),city=ctrl('zatca_city'),postal=ctrl('zatca_postal_code'),country=TextEditingController(text:(current['zatca_country_code']??'SA').toString());
+    final ok=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(title:const Text('عنوان ZATCA المنظم'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      TextField(controller:street,decoration:const InputDecoration(labelText:'اسم الشارع *')),const SizedBox(height:8),
+      TextField(controller:building,decoration:const InputDecoration(labelText:'رقم المبنى *')),const SizedBox(height:8),
+      TextField(controller:district,decoration:const InputDecoration(labelText:'الحي *')),const SizedBox(height:8),
+      TextField(controller:city,decoration:const InputDecoration(labelText:'المدينة *')),const SizedBox(height:8),
+      TextField(controller:postal,decoration:const InputDecoration(labelText:'الرمز البريدي *')),const SizedBox(height:8),
+      TextField(controller:country,decoration:const InputDecoration(labelText:'رمز الدولة *')),
+    ])),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('حفظ'))]));
+    if(ok==true){
+      try{await widget.repository.updateZatcaInstitutionAddress(institutionId:widget.membership.institutionId,street:street.text,buildingNumber:building.text,district:district.text,city:city.text,postalCode:postal.text,countryCode:country.text);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم حفظ عنوان ZATCA')));}
+      catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}
+    }
+    for(final x in [street,building,district,city,postal,country]){x.dispose();}
+  }
+
   @override
   Widget build(BuildContext context) {
     final manager = widget.membership.role != InstitutionRole.seller;
@@ -240,7 +260,7 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.membership.institutionName),
-        actions: const [SignOutButton()],
+        actions: [if(widget.membership.role==InstitutionRole.owner)IconButton(tooltip:'بيانات ZATCA',onPressed:_editZatcaAddress,icon:const Icon(Icons.receipt_long_outlined)),const SignOutButton()],
       ),
       body: pages[_index],
       bottomNavigationBar: NavigationBar(
