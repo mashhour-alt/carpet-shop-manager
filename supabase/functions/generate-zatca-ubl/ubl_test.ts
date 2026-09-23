@@ -30,3 +30,5 @@ Deno.test("DB end-to-end Stage 2 snapshot maps exactly to XML",()=>{
  assert(xml.includes("<cbc:PayableAmount currencyID=\"SAR\">236.29</cbc:PayableAmount>"),"XML payable parity");
  assert((xml.match(/<cac:InvoiceLine>/g)||[]).length===3,"XML line count parity");
 });
+
+Deno.test("same immutable snapshot generates byte-stable business XML",()=>{const i=base();const lines=[line()];assert(build(i,lines)===build(i,lines),"XML must be deterministic")});
