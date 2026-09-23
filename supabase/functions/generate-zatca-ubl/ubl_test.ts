@@ -15,3 +15,18 @@ Deno.test("standard rejects missing structured buyer address",()=>{let ok=false;
 Deno.test("Farsha gross snapshot mismatch blocks XML",()=>{let ok=false;try{build(base({line_extension_amount:99}),[line()])}catch{ok=true}assert(ok,"gross parity must be preserved")});
 
 Deno.test("UBL LegalMonetaryTotal LineExtension is sum of net invoice lines",()=>{const i=base({line_extension_amount:100,discount_amount:10,tax_exclusive_amount:90,vat_amount:13.5,tax_inclusive_amount:103.5,payable_amount:103.5});const xml=build(i,[line({discount_amount:10,taxable_amount:90,vat_amount:13.5,total_with_vat:103.5})]);assert(xml.includes("<cac:LegalMonetaryTotal><cbc:LineExtensionAmount currencyID=\"SAR\">90.00</cbc:LineExtensionAmount>"),"UBL line extension must be net")});
+
+Deno.test("DB end-to-end Stage 2 snapshot maps exactly to XML",()=>{
+ const i=base({line_extension_amount:212.60,discount_amount:7.13,tax_exclusive_amount:205.47,vat_amount:30.82,tax_inclusive_amount:236.29,payable_amount:236.29});
+ const lines=[
+  line({line_no:1,description:"Carpet",quantity:4.936,unit_code:"MTK",unit_price:37.89,gross_amount:187.03,discount_amount:6.27,taxable_amount:180.76,vat_amount:27.11,total_with_vat:207.87}),
+  line({line_no:2,description:"Installation",quantity:1,unit_code:"PCE",unit_price:5.55,gross_amount:5.55,discount_amount:.19,taxable_amount:5.36,vat_amount:.80,total_with_vat:6.16}),
+  line({line_no:3,description:"Felt",quantity:2,unit_code:"PCE",unit_price:10.01,gross_amount:20.02,discount_amount:.67,taxable_amount:19.35,vat_amount:2.91,total_with_vat:22.26})
+ ];
+ const xml=build(i,lines);
+ assert(xml.includes("<cbc:TaxableAmount currencyID=\"SAR\">205.47</cbc:TaxableAmount>"),"XML taxable parity");
+ assert(xml.includes("<cbc:TaxAmount currencyID=\"SAR\">30.82</cbc:TaxAmount>"),"XML VAT parity");
+ assert(xml.includes("<cbc:TaxInclusiveAmount currencyID=\"SAR\">236.29</cbc:TaxInclusiveAmount>"),"XML inclusive parity");
+ assert(xml.includes("<cbc:PayableAmount currencyID=\"SAR\">236.29</cbc:PayableAmount>"),"XML payable parity");
+ assert((xml.match(/<cac:InvoiceLine>/g)||[]).length===3,"XML line count parity");
+});
