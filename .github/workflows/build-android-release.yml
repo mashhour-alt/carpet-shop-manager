@@ -52,6 +52,17 @@ jobs:
           deno-version: v2.x
       - name: UBL backend golden and parity tests
         run: deno test supabase/functions/generate-zatca-ubl/ubl_test.ts
+      - name: UBL 2.1 XSD validation
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libxml2-utils unzip
+          mkdir -p build
+          deno run --allow-write supabase/functions/generate-zatca-ubl/xsd_fixture.ts
+          curl -fsSL https://docs.oasis-open.org/ubl/os-UBL-2.1/UBL-2.1.zip -o /tmp/ubl21.zip
+          unzip -q /tmp/ubl21.zip -d /tmp/ubl21
+          XSD=$(find /tmp/ubl21 -path '*/xsd/maindoc/UBL-Invoice-2.1.xsd' | head -1)
+          test -n "$XSD"
+          xmllint --noout --schema "$XSD" build/zatca-stage2-sample.xml
       - name: Static analysis and tests
         run: |
           flutter analyze --no-fatal-infos
