@@ -14,9 +14,10 @@ export function validate(i:any,lines:any[]){
  for(const [k,n] of [["seller_legal_name_snapshot","seller legal name"],["seller_vat_number_snapshot","seller VAT number"],["seller_street_snapshot","seller street name"],["seller_building_number_snapshot","seller building number"],["seller_district_snapshot","seller district"],["seller_city_snapshot","seller city"],["seller_postal_code_snapshot","seller postal code"],["seller_country_code_snapshot","seller country code"]] as const)if(!String(i[k]??"").trim())fail("Missing "+n);
  if(!lines.length)fail("Invoice has no canonical invoice lines");
  if(i.invoice_kind==="tax"){
+  if(!String(i.supply_date_snapshot??"").trim())fail("Missing supply date for standard tax invoice");
   if(!String(i.customer_name??"").trim())fail("Missing buyer legal name");
-  if(!String(i.customer_tax_number??"").trim())fail("Missing buyer VAT number");
-  if(!String(i.customer_address??"").trim())fail("Missing buyer address");
+  if(!String(i.customer_tax_number??"").trim()&&!String(i.buyer_id_value_snapshot??"").trim())fail("Missing buyer VAT number or identification");
+  for(const [k,n] of [["buyer_street_snapshot","buyer street name"],["buyer_city_snapshot","buyer city"],["buyer_postal_code_snapshot","buyer postal code"],["buyer_country_code_snapshot","buyer country code"]] as const)if(!String(i[k]??"").trim())fail("Missing "+n);
  }
  const sum=(k:string)=>lines.reduce((a,l)=>a+Number(l[k]),0);
  const eq=(a:number,b:number)=>Math.abs(a-b)<0.009;
