@@ -50,8 +50,11 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - name: UBL backend golden and parity tests
-        run: deno test supabase/functions/generate-zatca-ubl/ubl_test.ts
+      - name: UBL golden, parity and KSA business-rule tests
+        run: >-
+          deno test
+          supabase/functions/generate-zatca-ubl/ubl_test.ts
+          test/ubl_xml_test.ts
       - name: UBL 2.1 XSD validation
         run: |
           sudo apt-get update -qq

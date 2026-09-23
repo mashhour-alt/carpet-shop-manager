@@ -1,11 +1,92 @@
 import { build, validate } from "../supabase/functions/generate-zatca-ubl/ubl.ts";
-function invoice(kind="simplified"){return {zatca_uuid:"123e4567-e89b-42d3-a456-426614174000",invoice_kind:kind,invoice_number:7,issued_at:"2026-09-23T12:00:00Z",currency_code:"SAR",tax_category:"S",vat_rate:.15,seller_legal_name_snapshot:"Test Seller",seller_vat_number_snapshot:"310000000000003",seller_id_scheme_snapshot:"CRN",seller_id_value_snapshot:"1010000000",seller_street_snapshot:"Test Street",seller_building_number_snapshot:"1234",seller_district_snapshot:"Test District",seller_city_snapshot:"Riyadh",seller_postal_code_snapshot:"12345",seller_country_code_snapshot:"SA",customer_name:kind==="tax"?"Buyer Co":"Cash Customer",customer_tax_number:kind==="tax"?"310000000000011":"",customer_address:kind==="tax"?"Buyer address":"",line_extension_amount:100,discount_amount:0,tax_exclusive_amount:100,vat_amount:15,tax_inclusive_amount:115,payable_amount:115,payment_method:"cash"}}
-function line(no=1,gross=100,discount=0,vat=15){return {line_no:no,quantity:1,unit_code:"PCE",unit_price:gross,gross_amount:gross,discount_amount:discount,taxable_amount:gross-discount,tax_category:"S",vat_rate:.15,vat_amount:vat,total_with_vat:gross-discount+vat,description:"Item "+no}}
-Deno.test("A simplified one line",()=>{const x=build(invoice(),[line()]);if(!x.includes('name="0200000"')||!x.includes(">115.00<"))throw Error("simplified golden failed")});
-Deno.test("B multiple items",()=>{const i=invoice();i.line_extension_amount=150;i.tax_exclusive_amount=150;i.vat_amount=22.5;i.tax_inclusive_amount=i.payable_amount=172.5;const x=build(i,[line(1,100,0,15),line(2,50,0,7.5)]);if((x.match(/<cac:InvoiceLine>/g)||[]).length!==2)throw Error("line count")});
-Deno.test("C addons remain independent lines",()=>{const i=invoice();i.line_extension_amount=120;i.tax_exclusive_amount=120;i.vat_amount=18;i.tax_inclusive_amount=i.payable_amount=138;const a=line(2,20,0,3);a.description="Felt";const x=build(i,[line(),a]);if(!x.includes("Felt"))throw Error("addon missing")});
-Deno.test("D distributed discount parity",()=>{const i=invoice();i.discount_amount=10;i.tax_exclusive_amount=90;i.vat_amount=13.5;i.tax_inclusive_amount=i.payable_amount=103.5;const x=build(i,[line(1,100,10,13.5)]);if(!x.includes("<cbc:Amount currencyID=\"SAR\">10.00</cbc:Amount>"))throw Error("discount missing")});
-Deno.test("E VAT rounding snapshot is preserved",()=>{const i=invoice();i.line_extension_amount=33.33;i.tax_exclusive_amount=33.33;i.vat_amount=5;i.tax_inclusive_amount=i.payable_amount=38.33;const x=build(i,[line(1,33.33,0,5)]);if(!x.includes(">5.00<")||!x.includes(">38.33<"))throw Error("rounding changed")});
-Deno.test("F split payment does not change XML totals",()=>{const x=build(invoice(),[line()]);if(!x.includes(">115.00<"))throw Error("payable changed")});
-Deno.test("G standard invoice buyer VAT",()=>{const x=build(invoice("tax"),[line()]);if(!x.includes('name="0100000"')||!x.includes("310000000000011"))throw Error("standard buyer mapping")});
-Deno.test("parity rejects mismatch",()=>{const i=invoice();i.payable_amount=114;let failed=false;try{validate(i,[line()])}catch{failed=true}if(!failed)throw Error("mismatch accepted")});
+
+function invoice(kind = "simplified") {
+  const standard = kind === "tax";
+  return {
+    zatca_uuid: "123e4567-e89b-42d3-a456-426614174000",
+    invoice_kind: kind,
+    invoice_number: 7,
+    issued_at: "2026-09-23T12:00:00Z",
+    supply_date_snapshot: "2026-09-23",
+    currency_code: "SAR",
+    tax_category: "S",
+    vat_rate: .15,
+    seller_legal_name_snapshot: "Test Seller",
+    seller_vat_number_snapshot: "310000000000003",
+    seller_id_scheme_snapshot: "CRN",
+    seller_id_value_snapshot: "1010000000",
+    seller_street_snapshot: "Test Street",
+    seller_building_number_snapshot: "1234",
+    seller_district_snapshot: "Test District",
+    seller_city_snapshot: "Riyadh",
+    seller_postal_code_snapshot: "12345",
+    seller_country_code_snapshot: "SA",
+    customer_name: standard ? "Buyer Co" : "Cash Customer",
+    customer_tax_number: standard ? "310000000000013" : "",
+    customer_address: standard ? "Buyer address" : "",
+    buyer_id_scheme_snapshot: standard ? "CRN" : null,
+    buyer_id_value_snapshot: standard ? "1010000001" : null,
+    buyer_street_snapshot: standard ? "Buyer Street" : null,
+    buyer_building_number_snapshot: standard ? "5678" : null,
+    buyer_district_snapshot: standard ? "Buyer District" : null,
+    buyer_city_snapshot: standard ? "Riyadh" : null,
+    buyer_postal_code_snapshot: standard ? "12345" : null,
+    buyer_country_code_snapshot: standard ? "SA" : null,
+    line_extension_amount: 100,
+    discount_amount: 0,
+    tax_exclusive_amount: 100,
+    vat_amount: 15,
+    tax_inclusive_amount: 115,
+    payable_amount: 115,
+    payment_method: "cash",
+  };
+}
+
+function line(no = 1, gross = 100, discount = 0, vat = 15) {
+  return {
+    line_no: no,
+    quantity: 1,
+    unit_code: "PCE",
+    unit_price: gross,
+    gross_amount: gross,
+    discount_amount: discount,
+    taxable_amount: gross - discount,
+    tax_category: "S",
+    vat_rate: .15,
+    vat_amount: vat,
+    total_with_vat: gross - discount + vat,
+    description: `Item ${no}`,
+  };
+}
+
+Deno.test("public mapper simplified golden", () => {
+  const xml = build(invoice(), [line()]);
+  if (!xml.includes('name="0200000"') || !xml.includes(">115.00<")) {
+    throw Error("simplified golden failed");
+  }
+});
+
+Deno.test("public mapper standard golden", () => {
+  const xml = build(invoice("tax"), [line()]);
+  if (!xml.includes('name="0100000"') || !xml.includes("310000000000013")) {
+    throw Error("standard buyer mapping failed");
+  }
+  if (!xml.includes("<cbc:TaxCurrencyCode>SAR</cbc:TaxCurrencyCode>")) {
+    throw Error("tax currency missing");
+  }
+  if (!xml.includes("<cbc:ActualDeliveryDate>2026-09-23</cbc:ActualDeliveryDate>")) {
+    throw Error("supply date missing");
+  }
+});
+
+Deno.test("public mapper parity guard", () => {
+  const value = invoice();
+  value.payable_amount = 114;
+  let failed = false;
+  try {
+    validate(value, [line()]);
+  } catch {
+    failed = true;
+  }
+  if (!failed) throw Error("mismatch accepted");
+});

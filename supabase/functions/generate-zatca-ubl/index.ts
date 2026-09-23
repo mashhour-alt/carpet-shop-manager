@@ -1,7 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { build } from "./ubl.ts";
-const GENERATOR="farsha-ubl-1.0.0", STANDARD="ZATCA UBL 2.1";
+import {
+  build,
+  UBL_GENERATOR_VERSION as GENERATOR,
+  UBL_STANDARD_VERSION as STANDARD,
+} from "./ubl.ts";
 const fail=(m:string)=>{throw new Error("Cannot generate ZATCA XML: "+m)};
 Deno.serve(async(req)=>{
  try{
@@ -16,7 +19,11 @@ Deno.serve(async(req)=>{
   const {data:lines,error:le}=await sb.from("invoice_lines").select("*").eq("invoice_id",invoice_id).order("line_no");if(le)throw le;
   if(i.xml_content)return new Response(JSON.stringify({invoice_id,xml:i.xml_content,xml_standard_version:i.xml_standard_version,xml_generator_version:i.xml_generator_version,cached:true}),{headers:{"content-type":"application/json"}});
   const xml=build(i,lines||[]);
-  const {error:up}=await sb.from("invoices").update({xml_content:xml,xml_standard_version:STANDARD,xml_generator_version:GENERATOR,xml_generated_at:new Date().toISOString()}).eq("id",invoice_id).is("xml_content",null);if(up)throw up;
-  return new Response(JSON.stringify({invoice_id,xml,xml_standard_version:STANDARD,xml_generator_version:GENERATOR,cached:false}),{headers:{"content-type":"application/json"}});
+  const {data:stored,error:up}=await sb.from("invoices").update({xml_content:xml,xml_standard_version:STANDARD,xml_generator_version:GENERATOR,xml_generated_at:new Date().toISOString()}).eq("id",invoice_id).is("xml_content",null).select("xml_content,xml_standard_version,xml_generator_version").maybeSingle();if(up)throw up;
+  if(!stored){
+   const {data:cached,error:ce}=await sb.from("invoices").select("xml_content,xml_standard_version,xml_generator_version").eq("id",invoice_id).single();if(ce||!cached?.xml_content)throw ce||new Error("Concurrent XML generation did not persist a result");
+   return new Response(JSON.stringify({invoice_id,xml:cached.xml_content,xml_standard_version:cached.xml_standard_version,xml_generator_version:cached.xml_generator_version,cached:true}),{headers:{"content-type":"application/json"}});
+  }
+  return new Response(JSON.stringify({invoice_id,xml:stored.xml_content,xml_standard_version:stored.xml_standard_version,xml_generator_version:stored.xml_generator_version,cached:false}),{headers:{"content-type":"application/json"}});
  }catch(e){console.error(e);return new Response(JSON.stringify({error:e instanceof Error?e.message:String(e)}),{status:422,headers:{"content-type":"application/json"}})}
 });

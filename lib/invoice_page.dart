@@ -77,6 +77,12 @@ class _InvoicesPageState extends State<InvoicesPage> {
     final commercialRegistration = TextEditingController();
     final taxNumber = TextEditingController();
     final customerAddress = TextEditingController();
+    final buyerStreet = TextEditingController();
+    final buyerBuilding = TextEditingController();
+    final buyerDistrict = TextEditingController();
+    final buyerCity = TextEditingController();
+    final buyerPostalCode = TextEditingController();
+    final buyerCountryCode = TextEditingController(text: 'SA');
     final selectedSale = available.first;
     final discount = TextEditingController(text: selectedSale.discountAmount.toStringAsFixed(2));
 
@@ -166,8 +172,41 @@ class _InvoicesPageState extends State<InvoicesPage> {
                 if (invoiceKind == 'tax') ...[
                   const SizedBox(height: 10),
                   const Text(
-                    'اسم المشتري ورقمه الضريبي وعنوانه مطلوبة للفاتورة الضريبية.',
+                    'بيانات المشتري والعنوان الوطني المنظم مطلوبة للفاتورة الضريبية.',
                     style: TextStyle(fontSize: 12),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: buyerStreet,
+                    decoration: const InputDecoration(labelText: 'اسم شارع المشتري *'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: buyerBuilding,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'رقم مبنى المشتري (4 أرقام) *'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: buyerDistrict,
+                    decoration: const InputDecoration(labelText: 'حي المشتري *'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: buyerCity,
+                    decoration: const InputDecoration(labelText: 'مدينة المشتري *'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: buyerPostalCode,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'الرمز البريدي (5 أرقام) *'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: buyerCountryCode,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: const InputDecoration(labelText: 'رمز الدولة *', hintText: 'SA'),
                   ),
                 ],
               ],
@@ -191,11 +230,23 @@ class _InvoicesPageState extends State<InvoicesPage> {
     final crValue = commercialRegistration.text.trim();
     final taxValue = taxNumber.text.trim();
     final addressValue = customerAddress.text.trim();
+    final buyerStreetValue = buyerStreet.text.trim();
+    final buyerBuildingValue = buyerBuilding.text.trim();
+    final buyerDistrictValue = buyerDistrict.text.trim();
+    final buyerCityValue = buyerCity.text.trim();
+    final buyerPostalValue = buyerPostalCode.text.trim();
+    final buyerCountryValue = buyerCountryCode.text.trim().toUpperCase();
     final discountValue = double.tryParse(discount.text.trim());
     customer.dispose();
     commercialRegistration.dispose();
     taxNumber.dispose();
     customerAddress.dispose();
+    buyerStreet.dispose();
+    buyerBuilding.dispose();
+    buyerDistrict.dispose();
+    buyerCity.dispose();
+    buyerPostalCode.dispose();
+    buyerCountryCode.dispose();
     discount.dispose();
 
     if (save != true) return;
@@ -206,8 +257,28 @@ class _InvoicesPageState extends State<InvoicesPage> {
     if (invoiceKind == 'tax' &&
         (customerValue.isEmpty ||
             taxValue.isEmpty ||
-            addressValue.isEmpty)) {
-      _message('بيانات المشتري الأساسية مطلوبة للفاتورة الضريبية');
+            addressValue.isEmpty ||
+            buyerStreetValue.isEmpty ||
+            buyerBuildingValue.isEmpty ||
+            buyerDistrictValue.isEmpty ||
+            buyerCityValue.isEmpty ||
+            buyerPostalValue.isEmpty ||
+            buyerCountryValue.isEmpty)) {
+      _message('بيانات المشتري والعنوان المنظم مطلوبة للفاتورة الضريبية');
+      return;
+    }
+    if (invoiceKind == 'tax' && !RegExp(r'^3\d{13}3$').hasMatch(taxValue)) {
+      _message('الرقم الضريبي للمشتري يجب أن يكون 15 رقمًا ويبدأ وينتهي بـ3');
+      return;
+    }
+    if (invoiceKind == 'tax' && !RegExp(r'^[A-Z]{2}$').hasMatch(buyerCountryValue)) {
+      _message('رمز دولة المشتري يجب أن يكون حرفين مثل SA');
+      return;
+    }
+    if (invoiceKind == 'tax' && buyerCountryValue == 'SA' &&
+        (!RegExp(r'^\d{4}$').hasMatch(buyerBuildingValue) ||
+         !RegExp(r'^\d{5}$').hasMatch(buyerPostalValue))) {
+      _message('العنوان السعودي يتطلب رقم مبنى 4 أرقام ورمزًا بريديًا 5 أرقام');
       return;
     }
 
@@ -220,6 +291,12 @@ class _InvoicesPageState extends State<InvoicesPage> {
         customerAddress: addressValue,
         invoiceKind: invoiceKind,
         discountAmount: discountValue,
+        buyerStreet: buyerStreetValue,
+        buyerBuildingNumber: buyerBuildingValue,
+        buyerDistrict: buyerDistrictValue,
+        buyerCity: buyerCityValue,
+        buyerPostalCode: buyerPostalValue,
+        buyerCountryCode: buyerCountryValue,
       );
       _message('تم إصدار ${_invoiceKindLabel(invoiceKind)}');
       _reload();

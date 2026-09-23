@@ -53,7 +53,11 @@ class FarshaRepository {
     for(final entry in {'اسم الشارع':street,'رقم المبنى':buildingNumber,'الحي':district,'المدينة':city,'الرمز البريدي':postalCode,'رمز الدولة':countryCode}.entries){
       if(entry.value.trim().isEmpty) throw ArgumentError('بيانات ZATCA ناقصة: ${entry.key}');
     }
-    await client.from('institutions').update({'zatca_street_name':street.trim(),'zatca_building_number':buildingNumber.trim(),'zatca_district':district.trim(),'zatca_city':city.trim(),'zatca_postal_code':postalCode.trim(),'zatca_country_code':countryCode.trim().toUpperCase()}).eq('id',institutionId);
+    final country=countryCode.trim().toUpperCase();
+    if(!RegExp(r'^[A-Z]{2}$').hasMatch(country)) throw ArgumentError('رمز الدولة يجب أن يكون حرفين مثل SA');
+    if(country=='SA'&&!RegExp(r'^\d{4}$').hasMatch(buildingNumber.trim())) throw ArgumentError('رقم المبنى السعودي يجب أن يكون 4 أرقام');
+    if(country=='SA'&&!RegExp(r'^\d{5}$').hasMatch(postalCode.trim())) throw ArgumentError('الرمز البريدي السعودي يجب أن يكون 5 أرقام');
+    await client.from('institutions').update({'zatca_street_name':street.trim(),'zatca_building_number':buildingNumber.trim(),'zatca_district':district.trim(),'zatca_city':city.trim(),'zatca_postal_code':postalCode.trim(),'zatca_country_code':country}).eq('id',institutionId);
   }
 
   Future<String> claimInvitation(String code) async {
@@ -360,8 +364,14 @@ class FarshaRepository {
     required String customerAddress,
     required String invoiceKind,
     required double discountAmount,
+    String buyerStreet = '',
+    String buyerBuildingNumber = '',
+    String buyerDistrict = '',
+    String buyerCity = '',
+    String buyerPostalCode = '',
+    String buyerCountryCode = '',
   }) async {
-    final result = await client.rpc('issue_tax_invoice', params: {
+    final result = await client.rpc('issue_tax_invoice_v2', params: {
       'p_sale_id': saleId,
       'p_customer_name': customerName.trim(),
       'p_customer_cr': customerCommercialRegistration.trim(),
@@ -369,6 +379,12 @@ class FarshaRepository {
       'p_customer_address': customerAddress.trim(),
       'p_invoice_kind': invoiceKind,
       'p_discount': discountAmount,
+      'p_buyer_street': buyerStreet.trim(),
+      'p_buyer_building_number': buyerBuildingNumber.trim(),
+      'p_buyer_district': buyerDistrict.trim(),
+      'p_buyer_city': buyerCity.trim(),
+      'p_buyer_postal_code': buyerPostalCode.trim(),
+      'p_buyer_country_code': buyerCountryCode.trim().toUpperCase(),
     });
     return result as String;
   }
