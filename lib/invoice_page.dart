@@ -283,7 +283,7 @@ class _InvoicesPageState extends State<InvoicesPage> {
                       ),
                       subtitle: Text(
                         '${invoice.customerName} • ${_invoiceDate(invoice.issuedAt)}\n'
-                        '${_money(invoice.totalWithVat)} ⃁ شامل الضريبة',
+                        '${_money(invoice.snapshot.payableAmount)} ⃁ شامل الضريبة',
                       ),
                       trailing: const Icon(Icons.open_in_new),
                     ),
@@ -398,20 +398,6 @@ class _TaxInvoiceDocumentDialogState
       );
 }
 
-class _InvoiceLine {
-  const _InvoiceLine({
-    required this.description,
-    required this.quantity,
-    required this.unitPrice,
-    required this.subtotal,
-  });
-
-  final String description;
-  final double quantity;
-  final double unitPrice;
-  final double subtotal;
-}
-
 class TaxInvoiceDocument extends StatelessWidget {
   const TaxInvoiceDocument({
     super.key,
@@ -422,61 +408,13 @@ class TaxInvoiceDocument extends StatelessWidget {
   final InstitutionDocumentDetails institution;
   final TaxInvoiceRecord invoice;
 
-  List<_InvoiceLine> get _lines => [
-        _InvoiceLine(
-          description:
-              '${invoice.itemName} - ${invoice.color}\n${_money(invoice.length)}م × ${_money(invoice.width)}م = ${_money(invoice.area)}م²',
-          quantity: invoice.area,
-          unitPrice: invoice.pricePerSquareMeter,
-          subtotal: invoice.carpetAmount,
-        ),
-        if (invoice.installationAmount > 0)
-          _InvoiceLine(
-            description: 'تركيب / Installation',
-            quantity: 1,
-            unitPrice: invoice.installationAmount,
-            subtotal: invoice.installationAmount,
-          ),
-        if (invoice.glueAmount > 0)
-          _InvoiceLine(
-            description: 'غراء / Glue',
-            quantity: invoice.glueGallons,
-            unitPrice: invoice.glueGallons == 0
-                ? invoice.glueAmount
-                : invoice.glueAmount / invoice.glueGallons,
-            subtotal: invoice.glueAmount,
-          ),
-        if (invoice.ironAmount > 0)
-          _InvoiceLine(
-            description: 'حديد / Iron',
-            quantity: invoice.ironPieces,
-            unitPrice: invoice.ironPieces == 0
-                ? invoice.ironAmount
-                : invoice.ironAmount / invoice.ironPieces,
-            subtotal: invoice.ironAmount,
-          ),
-        if (invoice.addonsAmount > 0)
-          _InvoiceLine(
-            description: invoice.addonsSummary.isEmpty ? 'إضافات / Add-ons' : invoice.addonsSummary,
-            quantity: 1,
-            unitPrice: invoice.addonsAmount,
-            subtotal: invoice.addonsAmount,
-          ),
-        if (invoice.driverFee > 0)
-          _InvoiceLine(
-            description: 'توصيل / Delivery',
-            quantity: 1,
-            unitPrice: invoice.driverFee,
-            subtotal: invoice.driverFee,
-          ),
-      ];
+  List<InvoiceLineRecord> get _lines => invoice.snapshot.lines;
 
-  String get qrPayload => buildZatcaQrPayload(
+  String get qrPayload => buildZatcaQrPayloadFromSnapshot(
         sellerName: institution.name,
         sellerVatNumber: institution.taxNumber,
         issuedAt: invoice.issuedAt,
-        totalWithVat: invoice.totalWithVat,
-        vatAmount: invoice.vatAmount,
+        snapshot: invoice.snapshot,
       );
 
   @override
@@ -601,30 +539,30 @@ class TaxInvoiceDocument extends StatelessWidget {
                   const SizedBox(height: 12),
                   _TotalRow(
                     label: 'الإجمالي غير شامل الضريبة / Subtotal',
-                    amount: invoice.subtotal,
+                    amount: invoice.snapshot.lineExtensionAmount,
                   ),
                   _TotalRow(
                     label: 'الخصم / Discount',
-                    amount: invoice.discountAmount,
-                    negative: invoice.discountAmount > 0,
+                    amount: invoice.snapshot.discountAmount,
+                    negative: invoice.snapshot.discountAmount > 0,
                   ),
                   _TotalRow(
                     label: 'المبلغ الخاضع للضريبة / Taxable Amount',
-                    amount: invoice.taxableAmount,
+                    amount: invoice.snapshot.taxExclusiveAmount,
                   ),
                   _TotalRow(
                     label: 'ضريبة القيمة المضافة 15% / VAT',
-                    amount: invoice.vatAmount,
+                    amount: invoice.snapshot.vatAmount,
                   ),
                   const Divider(height: 8, thickness: 1.2),
                   _TotalRow(
                     label: 'الإجمالي المستحق / Amount Due',
-                    amount: invoice.totalWithVat,
+                    amount: invoice.snapshot.payableAmount,
                     bold: true,
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'فقط ${_amountInArabic(invoice.totalWithVat)} ريال سعودي لا غير',
+                    'فقط ${_amountInArabic(invoice.snapshot.payableAmount)} ريال سعودي لا غير',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
@@ -746,7 +684,7 @@ class _ItemRow extends StatelessWidget {
             Expanded(flex: 5, child: Text(line.description, style: const TextStyle(fontSize: 9))),
             Expanded(flex: 2, child: Text(_money(line.quantity), textAlign: TextAlign.center)),
             Expanded(flex: 2, child: Text(_money(line.unitPrice), textAlign: TextAlign.center)),
-            Expanded(flex: 2, child: Text(_money(line.subtotal), textAlign: TextAlign.center)),
+            Expanded(flex: 2, child: Text(_money(line.grossAmount), textAlign: TextAlign.center)),
           ],
         ),
       );
