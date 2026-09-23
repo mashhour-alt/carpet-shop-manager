@@ -162,14 +162,17 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
   late final Future<List<PersonOption>> sellers=widget.repository.loadSellers(widget.membership.institutionId);
   late final Future<List<PersonOption>> drivers=widget.repository.loadDriverOptions(widget.membership.institutionId);
   late final Future<List<AddonTypeRecord>> addonTypes=widget.repository.loadAddonTypes(widget.membership.institutionId);
-  final customer=TextEditingController(),length=TextEditingController(),price=TextEditingController(),driverFee=TextEditingController(text:'0'),notes=TextEditingController();
+  final customer=TextEditingController(),length=TextEditingController(),price=TextEditingController(),discount=TextEditingController(text:'0'),driverFee=TextEditingController(text:'0'),notes=TextEditingController();
   String? inventoryId,sellerId,driverId; bool busy=false;
   final List<SaleAddonInput> addons=[]; final List<SalePaymentInput> payments=[];
-  @override void dispose(){for(final x in[customer,length,price,driverFee,notes])x.dispose();super.dispose();}
+  @override void dispose(){for(final x in[customer,length,price,discount,driverFee,notes])x.dispose();super.dispose();}
   double n(TextEditingController c)=>double.tryParse(c.text.trim())??0;
   void msg(String x)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(x)));
   double get addonSales=>addons.fold(0,(a,b)=>a+b.saleTotal);
-  double total(List<InventoryRecord> items){final item=items.where((e)=>e.id==inventoryId).firstOrNull;if(item==null)return 0;return n(length)*4*n(price)+addonSales;}
+  double gross(List<InventoryRecord> items){final item=items.where((e)=>e.id==inventoryId).firstOrNull;if(item==null)return 0;return n(length)*4*n(price)+addonSales;}
+  double taxable(List<InventoryRecord> items)=>gross(items)-n(discount);
+  double vat(List<InventoryRecord> items)=>(taxable(items)*.15*100).round()/100;
+  double payable(List<InventoryRecord> items)=>taxable(items)+vat(items);
   Future<void> addPayment(double due) async {
     var method='cash';final amount=TextEditingController(text:due>0?due.toStringAsFixed(2):'');final ref=TextEditingController();
     final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setD)=>AlertDialog(title:const Text('إضافة دفعة'),content:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -192,17 +195,18 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
     final seller=widget.membership.role==InstitutionRole.seller?widget.repository.userId:sellerId;
     final item=items.where((e)=>e.id==inventoryId).firstOrNull;
     if(item==null||seller==null||n(length)<=0||n(length)>item.remainingLength||n(price)<0)return msg('راجع القطعة والطول والسعر');
-    final t=total(items),paid=payments.fold<double>(0,(a,b)=>a+b.amount);
-    if((paid-t).abs()>.009)return msg('إجمالي الدفعات '+paid.toStringAsFixed(2)+' لا يساوي إجمالي البيع '+t.toStringAsFixed(2));
+    final g=gross(items),d=n(discount),tx=taxable(items),v=vat(items),p=payable(items),paid=payments.fold<double>(0,(a,b)=>a+b.amount);
+    if(d<0||d>g)return msg('الخصم يجب أن يكون بين صفر والإجمالي قبل الخصم');
+    if((paid-p).abs()>.009)return msg('إجمالي الدفعات '+paid.toStringAsFixed(2)+' لا يساوي المبلغ المستحق شامل الضريبة '+p.toStringAsFixed(2));
     setState(()=>busy=true);
-    try{await widget.repository.recordSaleV2(institutionId:widget.membership.institutionId,inventoryId:item.id,sellerId:seller,driverId:driverId,customerName:customer.text,length:n(length),salePrice:n(price),driverFee:n(driverFee),notes:notes.text,payments:payments,addons:addons);
-      msg('تم حفظ البيع والدفعات وخصم المخزون');setState((){inventory=widget.repository.loadInventory(widget.membership.institutionId);length.clear();price.clear();notes.clear();payments.clear();addons.clear();});
+    try{await widget.repository.recordSaleV2(institutionId:widget.membership.institutionId,inventoryId:item.id,sellerId:seller,driverId:driverId,customerName:customer.text,length:n(length),salePrice:n(price),driverFee:n(driverFee),notes:notes.text,payments:payments,addons:addons,discount:d);
+      msg('تم حفظ البيع والدفعات وخصم المخزون');setState((){inventory=widget.repository.loadInventory(widget.membership.institutionId);length.clear();price.clear();discount.text='0';notes.clear();payments.clear();addons.clear();});
     }catch(e){msg(e.toString());}finally{if(mounted)setState(()=>busy=false);}
   }
   @override Widget build(BuildContext context)=>FutureBuilder<List<InventoryRecord>>(future:inventory,builder:(c,iv)=>FutureBuilder<List<PersonOption>>(future:sellers,builder:(c,ss)=>FutureBuilder<List<PersonOption>>(future:drivers,builder:(c,dd)=>FutureBuilder<List<AddonTypeRecord>>(future:addonTypes,builder:(c,aa){
     if(!iv.hasData||!ss.hasData||!dd.hasData||!aa.hasData)return const Center(child:CircularProgressIndicator());
     if(widget.membership.role==InstitutionRole.accountant)return ListView(padding:const EdgeInsets.all(16),children:[SettlementPanel(membership:widget.membership,repository:widget.repository,sellers:ss.data!)]);
-    final items=iv.data!,customerAddons=aa.data!.where((x)=>x.behavior=='customer_addon').toList(),t=total(items),paid=payments.fold<double>(0,(a,b)=>a+b.amount),remaining=t-paid;
+    final items=iv.data!,customerAddons=aa.data!.where((x)=>x.behavior=='customer_addon').toList(),g=gross(items),d=n(discount),tx=taxable(items),v=vat(items),p=payable(items),paid=payments.fold<double>(0,(a,b)=>a+b.amount),remaining=p-paid;
     Widget section(String title,IconData icon,List<Widget> children,{bool initiallyExpanded=true})=>Card(child:ExpansionTile(initiallyExpanded:initiallyExpanded,leading:Icon(icon),title:Text(title,style:const TextStyle(fontWeight:FontWeight.bold)),children:[Padding(padding:const EdgeInsets.fromLTRB(14,0,14,14),child:Column(children:children))]));
     return ListView(padding:const EdgeInsets.all(16),children:[
       const Text('بيعة جديدة',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text('أكمل الأقسام بالترتيب ثم راجع الإجمالي قبل الحفظ.',style:TextStyle(color:Colors.grey.shade700)),const SizedBox(height:14),
@@ -214,7 +218,7 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
       const SizedBox(height:10),
       section('2. المقاس والسعر',Icons.straighten,[
         Row(children:[Expanded(child:TextField(controller:length,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'الطول م'))),const SizedBox(width:8),Expanded(child:TextField(controller:price,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سعر البيع/م²')))]),
-        Padding(padding:const EdgeInsets.only(top:10),child:Align(alignment:Alignment.centerRight,child:Text('المساحة: '+(n(length)*4).toStringAsFixed(2)+' م² • العرض ثابت 4 م',style:const TextStyle(fontWeight:FontWeight.w600)))),
+        Padding(padding:const EdgeInsets.only(top:10),child:Align(alignment:Alignment.centerRight,child:Text('المساحة: '+(n(length)*4).toStringAsFixed(2)+' م² • العرض ثابت 4 م',style:const TextStyle(fontWeight:FontWeight.w600)))),const SizedBox(height:10),TextField(controller:discount,onChanged:(_)=>setState((){}),keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'الخصم')),
       ]),
       const SizedBox(height:10),
       section('3. الإضافات',Icons.extension_outlined,[
@@ -234,7 +238,7 @@ class _SalesSettlementPageState extends State<SalesSettlementPage> {
       ],initiallyExpanded:payments.isNotEmpty),
       const SizedBox(height:10),
       section('6. المراجعة والإجمالي',Icons.fact_check_outlined,[
-        Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('إجمالي البيع',style:TextStyle(fontWeight:FontWeight.bold)),Text(t.toStringAsFixed(2)+' ⃁',style:const TextStyle(fontWeight:FontWeight.w900,fontSize:22))]),
+        Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('الإجمالي قبل الخصم'),Text(g.toStringAsFixed(2)+' ⃁')]),const SizedBox(height:8),Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('الخصم'),Text(d.toStringAsFixed(2)+' ⃁')]),const SizedBox(height:8),Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('الخاضع للضريبة'),Text(tx.toStringAsFixed(2)+' ⃁')]),const SizedBox(height:8),Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('VAT 15%'),Text(v.toStringAsFixed(2)+' ⃁')]),const SizedBox(height:8),Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('الإجمالي شامل الضريبة / المستحق',style:TextStyle(fontWeight:FontWeight.bold)),Text(p.toStringAsFixed(2)+' ⃁',style:const TextStyle(fontWeight:FontWeight.w900,fontSize:22))]),
         const SizedBox(height:8),Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('المدفوع'),Text(paid.toStringAsFixed(2)+' ⃁')]),
         const SizedBox(height:8),Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('المتبقي'),Text(remaining.toStringAsFixed(2)+' ⃁',style:TextStyle(fontWeight:FontWeight.bold,color:remaining.abs()>.009?Colors.red:null))]),
         const SizedBox(height:14),SizedBox(width:double.infinity,child:FilledButton(onPressed:busy?null:()=>save(items),child:Text(busy?'جاري الحفظ...':'حفظ البيع وخصم المخزون'))),
