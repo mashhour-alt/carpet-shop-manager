@@ -283,7 +283,7 @@ class _InvoicesPageState extends State<InvoicesPage> {
                       ),
                       subtitle: Text(
                         '${invoice.customerName} • ${_invoiceDate(invoice.issuedAt)}\n'
-                        '${_money(invoice.snapshot.payableAmount)} ⃁ شامل الضريبة',
+                        '${_money(_financial.total)} ⃁ شامل الضريبة',
                       ),
                       trailing: const Icon(Icons.open_in_new),
                     ),
@@ -408,7 +408,8 @@ class TaxInvoiceDocument extends StatelessWidget {
   final InstitutionDocumentDetails institution;
   final TaxInvoiceRecord invoice;
 
-  List<InvoiceLineRecord> get _lines => invoice.snapshot.lines;
+  InvoiceFinancialPresentation get _financial => invoice.presentation;
+  List<InvoiceLineRecord> get _lines => _financial.lines;
 
   String get qrPayload => buildZatcaQrPayloadFromSnapshot(
         sellerName: institution.name,
@@ -539,30 +540,30 @@ class TaxInvoiceDocument extends StatelessWidget {
                   const SizedBox(height: 12),
                   _TotalRow(
                     label: 'الإجمالي غير شامل الضريبة / Subtotal',
-                    amount: invoice.snapshot.lineExtensionAmount,
+                    amount: _financial.subtotal,
                   ),
                   _TotalRow(
                     label: 'الخصم / Discount',
-                    amount: invoice.snapshot.discountAmount,
-                    negative: invoice.snapshot.discountAmount > 0,
+                    amount: _financial.discount,
+                    negative: _financial.discount > 0,
                   ),
                   _TotalRow(
                     label: 'المبلغ الخاضع للضريبة / Taxable Amount',
-                    amount: invoice.snapshot.taxExclusiveAmount,
+                    amount: _financial.taxable,
                   ),
                   _TotalRow(
                     label: 'ضريبة القيمة المضافة 15% / VAT',
-                    amount: invoice.snapshot.vatAmount,
+                    amount: _financial.vat,
                   ),
                   const Divider(height: 8, thickness: 1.2),
                   _TotalRow(
                     label: 'الإجمالي المستحق / Amount Due',
-                    amount: invoice.snapshot.payableAmount,
+                    amount: _financial.total,
                     bold: true,
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'فقط ${_amountInArabic(invoice.snapshot.payableAmount)} ريال سعودي لا غير',
+                    'فقط ${_amountInArabic(_financial.total)} ريال سعودي لا غير',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
