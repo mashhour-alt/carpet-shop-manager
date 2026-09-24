@@ -26,6 +26,8 @@ create table public.invoices(
 grant select on table public.invoices to service_role;
 
 create function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
+grant usage on schema auth to service_role;
+grant execute on function auth.uid() to service_role;
 create function public.has_institution_role(uuid,public.institution_role[])
 returns boolean language sql stable as $$ select true $$;
 create function public.can_access_branch(uuid)
