@@ -298,10 +298,14 @@ export function buildPhase2Qr(input: Phase2QrInput) {
 
   const timestamp = new Date(input.issuedAt);
   if (Number.isNaN(timestamp.getTime())) fail("QR timestamp is invalid");
+  // UBL IssueTime is serialized at whole-second precision. PostgreSQL
+  // timestamptz values can include fractional seconds, so QR tag 3 must use
+  // the exact same precision as the signed XML.
+  const invoiceTimestamp = timestamp.toISOString().slice(0, 19) + "Z";
   const values: Array<[number, Uint8Array]> = [
     [1, textEncoder.encode(input.sellerName)],
     [2, textEncoder.encode(input.sellerVatNumber)],
-    [3, textEncoder.encode(timestamp.toISOString().replace(".000Z", "Z"))],
+    [3, textEncoder.encode(invoiceTimestamp)],
     [4, textEncoder.encode(money(input.taxInclusiveAmount))],
     [5, textEncoder.encode(money(input.vatAmount))],
     [6, input.invoiceHash],
