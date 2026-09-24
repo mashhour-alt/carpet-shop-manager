@@ -1,4 +1,7 @@
-import { build, validate } from "../supabase/functions/generate-zatca-ubl/ubl.ts";
+import {
+  build,
+  validate,
+} from "../supabase/functions/generate-zatca-ubl/ubl.ts";
 
 function invoice(kind = "simplified") {
   const standard = kind === "tax";
@@ -17,6 +20,7 @@ function invoice(kind = "simplified") {
     seller_id_value_snapshot: "1010000000",
     seller_street_snapshot: "Test Street",
     seller_building_number_snapshot: "1234",
+    seller_additional_number_snapshot: "5678",
     seller_district_snapshot: "Test District",
     seller_city_snapshot: "Riyadh",
     seller_postal_code_snapshot: "12345",
@@ -28,6 +32,7 @@ function invoice(kind = "simplified") {
     buyer_id_value_snapshot: standard ? "1010000001" : null,
     buyer_street_snapshot: standard ? "Buyer Street" : null,
     buyer_building_number_snapshot: standard ? "5678" : null,
+    buyer_additional_number_snapshot: standard ? "4321" : null,
     buyer_district_snapshot: standard ? "Buyer District" : null,
     buyer_city_snapshot: standard ? "Riyadh" : null,
     buyer_postal_code_snapshot: standard ? "12345" : null,
@@ -74,7 +79,9 @@ Deno.test("public mapper standard golden", () => {
   if (!xml.includes("<cbc:TaxCurrencyCode>SAR</cbc:TaxCurrencyCode>")) {
     throw Error("tax currency missing");
   }
-  if (!xml.includes("<cbc:ActualDeliveryDate>2026-09-23</cbc:ActualDeliveryDate>")) {
+  if (
+    !xml.includes("<cbc:ActualDeliveryDate>2026-09-23</cbc:ActualDeliveryDate>")
+  ) {
     throw Error("supply date missing");
   }
 });

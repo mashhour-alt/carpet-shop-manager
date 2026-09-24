@@ -1,4 +1,60 @@
 import { build } from "./ubl.ts";
-const i={zatca_uuid:"11111111-1111-4111-8111-111111111111",invoice_number:42,issued_at:"2026-09-23T12:34:56Z",invoice_kind:"tax",currency_code:"SAR",seller_legal_name_snapshot:"Test Seller",seller_vat_number_snapshot:"310000000000003",seller_id_scheme_snapshot:"CRN",seller_id_value_snapshot:"1010000000",seller_street_snapshot:"Test Street",seller_building_number_snapshot:"1234",seller_district_snapshot:"Test District",seller_city_snapshot:"Riyadh",seller_postal_code_snapshot:"12345",seller_country_code_snapshot:"SA",customer_name:"Test Buyer",customer_tax_number:"310000000000013",buyer_id_scheme_snapshot:"CRN",buyer_id_value_snapshot:"1010000001",buyer_street_snapshot:"Buyer Street",buyer_building_number_snapshot:"5678",buyer_district_snapshot:"Buyer District",buyer_city_snapshot:"Riyadh",buyer_postal_code_snapshot:"12345",buyer_country_code_snapshot:"SA",supply_date_snapshot:"2026-09-23",tax_category:"S",vat_rate:.15,line_extension_amount:100,discount_amount:0,tax_exclusive_amount:100,vat_amount:15,tax_inclusive_amount:115,payable_amount:115};
-const l={line_no:1,quantity:1,unit_code:"PCE",unit_price:100,gross_amount:100,discount_amount:0,taxable_amount:100,tax_category:"S",vat_rate:.15,vat_amount:15,total_with_vat:115,description:"Test Item"};
-await Deno.writeTextFile("build/zatca-stage2-sample.xml",build(i,[l]));
+import { addIcvAndPih, INITIAL_PIH } from "./security.ts";
+const i = {
+  zatca_uuid: "11111111-1111-4111-8111-111111111111",
+  invoice_number: 42,
+  issued_at: "2026-09-23T12:34:56Z",
+  invoice_kind: "tax",
+  currency_code: "SAR",
+  seller_legal_name_snapshot: "Test Seller",
+  seller_vat_number_snapshot: "310000000000003",
+  seller_id_scheme_snapshot: "CRN",
+  seller_id_value_snapshot: "1010000000",
+  seller_street_snapshot: "Test Street",
+  seller_building_number_snapshot: "1234",
+  seller_additional_number_snapshot: "5678",
+  seller_district_snapshot: "Test District",
+  seller_city_snapshot: "Riyadh",
+  seller_postal_code_snapshot: "12345",
+  seller_country_code_snapshot: "SA",
+  customer_name: "Test Buyer",
+  customer_tax_number: "310000000000013",
+  buyer_id_scheme_snapshot: "CRN",
+  buyer_id_value_snapshot: "1010000001",
+  buyer_street_snapshot: "Buyer Street",
+  buyer_building_number_snapshot: "5678",
+  buyer_additional_number_snapshot: "4321",
+  buyer_district_snapshot: "Buyer District",
+  buyer_city_snapshot: "Riyadh",
+  buyer_postal_code_snapshot: "12345",
+  buyer_region_snapshot: "Riyadh Region",
+  buyer_country_code_snapshot: "SA",
+  supply_date_snapshot: "2026-09-23",
+  tax_category: "S",
+  vat_rate: .15,
+  line_extension_amount: 100,
+  discount_amount: 0,
+  tax_exclusive_amount: 100,
+  vat_amount: 15,
+  tax_inclusive_amount: 115,
+  payable_amount: 115,
+  payment_method: "bank_transfer",
+};
+const l = {
+  line_no: 1,
+  quantity: 1,
+  unit_code: "PCE",
+  unit_price: 100,
+  gross_amount: 100,
+  discount_amount: 0,
+  taxable_amount: 100,
+  tax_category: "S",
+  vat_rate: .15,
+  vat_amount: 15,
+  total_with_vat: 115,
+  description: "Test Item",
+};
+await Deno.writeTextFile(
+  "build/zatca-stage2-sample.xml",
+  addIcvAndPih(build(i, [l]), 1, INITIAL_PIH),
+);

@@ -46,12 +46,12 @@ begin
 
   insert into public.institutions(
     id,name,commercial_registration,tax_number,address,phone,email,created_by,
-    zatca_street_name,zatca_building_number,zatca_district,zatca_city,
+    zatca_street_name,zatca_building_number,zatca_additional_number,zatca_district,zatca_city,
     zatca_postal_code,zatca_country_code
   ) values(
     v_institution,'Stage 3 Test Seller','1010000000','310000000000003',
     'Test National Address','0500000000','stage3@example.test',v_owner,
-    'Test Street','1234','Test District','Riyadh','12345','SA'
+    'Test Street','1234','5678','Test District','Riyadh','12345','SA'
   );
   insert into public.institution_memberships(institution_id,user_id,role)
     values(v_institution,v_owner,'owner'),(v_institution,v_seller,'seller');
@@ -72,8 +72,8 @@ begin
     '[{"name":"Installation","unit":"piece","quantity":1,"sale_unit_price":5.55,"cost_unit_price":0},{"name":"Felt","unit":"piece","quantity":2,"sale_unit_price":10.01,"cost_unit_price":0}]'::jsonb,
     7.13
   );
-  v_invoice_one:=public.issue_tax_invoice_v2(
-    v_sale_one,'Cash Customer','','','','simplified',7.13,'','','','','',''
+  v_invoice_one:=public.issue_tax_invoice_v3(
+    v_sale_one,'Cash Customer','','','','simplified',7.13,'','','','','','','',''
   );
 
   v_sale_two:=public.record_sale_financial_v2(
@@ -83,10 +83,10 @@ begin
     '[{"name":"Installation","unit":"piece","quantity":1,"sale_unit_price":5.55,"cost_unit_price":0},{"name":"Felt","unit":"piece","quantity":2,"sale_unit_price":10.01,"cost_unit_price":0}]'::jsonb,
     7.13
   );
-  v_invoice_two:=public.issue_tax_invoice_v2(
+  v_invoice_two:=public.issue_tax_invoice_v3(
     v_sale_two,'Stage 3 Test Buyer','1010000001','310000000000013',
     'Buyer Street, Buyer District, Riyadh 12345','tax',7.13,
-    'Buyer Street','5678','Buyer District','Riyadh','12345','SA'
+    'Buyer Street','5678','4321','Buyer District','Riyadh','12345','Riyadh Region','SA'
   );
 
   insert into public.zatca_egs_units(

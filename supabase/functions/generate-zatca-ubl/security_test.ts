@@ -112,6 +112,7 @@ const base = (overrides: Record<string, unknown> = {}) => ({
   seller_id_value_snapshot: "1010000000",
   seller_street_snapshot: "Test Street",
   seller_building_number_snapshot: "1234",
+  seller_additional_number_snapshot: "5678",
   seller_district_snapshot: "Test District",
   seller_city_snapshot: "Riyadh",
   seller_postal_code_snapshot: "12345",
@@ -122,6 +123,7 @@ const base = (overrides: Record<string, unknown> = {}) => ({
   buyer_id_value_snapshot: null,
   buyer_street_snapshot: null,
   buyer_building_number_snapshot: null,
+  buyer_additional_number_snapshot: null,
   buyer_district_snapshot: null,
   buyer_city_snapshot: null,
   buyer_postal_code_snapshot: null,
@@ -324,6 +326,7 @@ Deno.test("standard invoice cannot be locally stamped before ZATCA clearance", a
     buyer_id_value_snapshot: "1010000001",
     buyer_street_snapshot: "Buyer Street",
     buyer_building_number_snapshot: "5678",
+    buyer_additional_number_snapshot: "4321",
     buyer_district_snapshot: "Buyer District",
     buyer_city_snapshot: "Riyadh",
     buyer_postal_code_snapshot: "12345",
@@ -538,11 +541,17 @@ Deno.test("CSR official fields and non-exportable provider contract", async () =
   const config = buildZatcaCsrOpenSslConfig(fields);
   assert(
     config.includes(
-      "certificateTemplateName = ASN1:PRINTABLESTRING:ZATCA-Code-Signing",
+      "certificateTemplateName = ASN1:PRINTABLESTRING:TSTZATCA-Code-Signing",
     ),
     "CSR template OID missing",
   );
   assert(config.includes("title = 1100"), "CSR functionality map missing");
+  assert(
+    buildZatcaCsrOpenSslConfig(fields, "production").includes(
+      "certificateTemplateName = ASN1:PRINTABLESTRING:ZATCA-Code-Signing",
+    ),
+    "production CSR template must be explicit",
+  );
   const generated = await generateZatcaCsr(fields, {
     async generatePkcs10(request) {
       assert(request.curve === "secp256k1", "wrong CSR curve");

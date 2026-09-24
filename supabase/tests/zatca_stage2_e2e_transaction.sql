@@ -37,12 +37,12 @@ begin
   begin
     insert into public.institutions(
       id,name,commercial_registration,tax_number,address,phone,email,created_by,
-      zatca_street_name,zatca_building_number,zatca_district,zatca_city,
+      zatca_street_name,zatca_building_number,zatca_additional_number,zatca_district,zatca_city,
       zatca_postal_code,zatca_country_code
     ) values(
       institution_id,'Stage 2 Test Seller','1010000000','310000000000003',
       'Test National Address','0500000000','stage2@example.test',owner_id,
-      'Test Street','1234','Test District','Riyadh','12345','SA'
+      'Test Street','1234','5678','Test District','Riyadh','12345','SA'
     );
     insert into public.institution_memberships(institution_id,user_id,role)
       values(institution_id,owner_id,'owner'),(institution_id,seller_id,'seller');
@@ -63,11 +63,11 @@ begin
       '[{"name":"Installation","unit":"piece","quantity":1,"sale_unit_price":5.55,"cost_unit_price":0},{"name":"Felt","unit":"piece","quantity":2,"sale_unit_price":10.01,"cost_unit_price":0}]'::jsonb,
       7.13
     );
-    simplified_invoice_id:=public.issue_tax_invoice_v2(
-      simplified_sale_id,'Cash Customer','','','','simplified',7.13,'','','','','',''
+    simplified_invoice_id:=public.issue_tax_invoice_v3(
+      simplified_sale_id,'Cash Customer','','','','simplified',7.13,'','','','','','','',''
     );
-    repeated_invoice_id:=public.issue_tax_invoice_v2(
-      simplified_sale_id,'Ignored on repeat','','','','simplified',7.13,'','','','','',''
+    repeated_invoice_id:=public.issue_tax_invoice_v3(
+      simplified_sale_id,'Ignored on repeat','','','','simplified',7.13,'','','','','','','',''
     );
     if repeated_invoice_id<>simplified_invoice_id then
       raise exception 'Repeated simplified invoice request returned a different invoice';
@@ -80,14 +80,14 @@ begin
       '[{"name":"Installation","unit":"piece","quantity":1,"sale_unit_price":5.55,"cost_unit_price":0},{"name":"Felt","unit":"piece","quantity":2,"sale_unit_price":10.01,"cost_unit_price":0}]'::jsonb,
       7.13
     );
-    standard_invoice_id:=public.issue_tax_invoice_v2(
+    standard_invoice_id:=public.issue_tax_invoice_v3(
       standard_sale_id,'Stage 2 Test Buyer','1010000001','310000000000013',
       'Buyer Street, Buyer District, Riyadh 12345','tax',7.13,
-      'Buyer Street','5678','Buyer District','Riyadh','12345','SA'
+      'Buyer Street','5678','4321','Buyer District','Riyadh','12345','Riyadh Region','SA'
     );
-    repeated_invoice_id:=public.issue_tax_invoice_v2(
+    repeated_invoice_id:=public.issue_tax_invoice_v3(
       standard_sale_id,'Ignored on repeat','999','399999999999993',
-      'Ignored','tax',7.13,'Ignored','9999','Ignored','Ignored','99999','SA'
+      'Ignored','tax',7.13,'Ignored','9999','8888','Ignored','Ignored','99999','Ignored Region','SA'
     );
     if repeated_invoice_id<>standard_invoice_id then
       raise exception 'Repeated standard invoice request returned a different invoice';
@@ -174,6 +174,7 @@ as $$
       'seller_id_value_snapshot',i.seller_id_value_snapshot,
       'seller_street_snapshot',i.seller_street_snapshot,
       'seller_building_number_snapshot',i.seller_building_number_snapshot,
+      'seller_additional_number_snapshot',i.seller_additional_number_snapshot,
       'seller_district_snapshot',i.seller_district_snapshot,
       'seller_city_snapshot',i.seller_city_snapshot,
       'seller_postal_code_snapshot',i.seller_postal_code_snapshot,
@@ -183,10 +184,13 @@ as $$
       'buyer_id_value_snapshot',i.buyer_id_value_snapshot,
       'buyer_street_snapshot',i.buyer_street_snapshot,
       'buyer_building_number_snapshot',i.buyer_building_number_snapshot,
+      'buyer_additional_number_snapshot',i.buyer_additional_number_snapshot,
       'buyer_district_snapshot',i.buyer_district_snapshot,
       'buyer_city_snapshot',i.buyer_city_snapshot,
       'buyer_postal_code_snapshot',i.buyer_postal_code_snapshot,
+      'buyer_region_snapshot',i.buyer_region_snapshot,
       'buyer_country_code_snapshot',i.buyer_country_code_snapshot,
+      'payment_method',i.payment_method,
       'tax_category',i.tax_category,'vat_rate',i.vat_rate,
       'line_extension_amount',i.line_extension_amount,
       'discount_amount',i.discount_amount,'tax_exclusive_amount',i.tax_exclusive_amount,

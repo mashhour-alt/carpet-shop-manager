@@ -79,9 +79,11 @@ class _InvoicesPageState extends State<InvoicesPage> {
     final customerAddress = TextEditingController();
     final buyerStreet = TextEditingController();
     final buyerBuilding = TextEditingController();
+    final buyerAdditionalNumber = TextEditingController();
     final buyerDistrict = TextEditingController();
     final buyerCity = TextEditingController();
     final buyerPostalCode = TextEditingController();
+    final buyerRegion = TextEditingController();
     final buyerCountryCode = TextEditingController(text: 'SA');
     final selectedSale = available.first;
     final discount = TextEditingController(text: selectedSale.discountAmount.toStringAsFixed(2));
@@ -188,6 +190,12 @@ class _InvoicesPageState extends State<InvoicesPage> {
                   ),
                   const SizedBox(height: 10),
                   TextField(
+                    controller: buyerAdditionalNumber,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'الرقم الإضافي للمشتري (4 أرقام) *'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
                     controller: buyerDistrict,
                     decoration: const InputDecoration(labelText: 'حي المشتري *'),
                   ),
@@ -201,6 +209,11 @@ class _InvoicesPageState extends State<InvoicesPage> {
                     controller: buyerPostalCode,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'الرمز البريدي (5 أرقام) *'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: buyerRegion,
+                    decoration: const InputDecoration(labelText: 'منطقة المشتري الإدارية'),
                   ),
                   const SizedBox(height: 10),
                   TextField(
@@ -232,9 +245,11 @@ class _InvoicesPageState extends State<InvoicesPage> {
     final addressValue = customerAddress.text.trim();
     final buyerStreetValue = buyerStreet.text.trim();
     final buyerBuildingValue = buyerBuilding.text.trim();
+    final buyerAdditionalNumberValue = buyerAdditionalNumber.text.trim();
     final buyerDistrictValue = buyerDistrict.text.trim();
     final buyerCityValue = buyerCity.text.trim();
     final buyerPostalValue = buyerPostalCode.text.trim();
+    final buyerRegionValue = buyerRegion.text.trim();
     final buyerCountryValue = buyerCountryCode.text.trim().toUpperCase();
     final discountValue = double.tryParse(discount.text.trim());
     customer.dispose();
@@ -243,9 +258,11 @@ class _InvoicesPageState extends State<InvoicesPage> {
     customerAddress.dispose();
     buyerStreet.dispose();
     buyerBuilding.dispose();
+    buyerAdditionalNumber.dispose();
     buyerDistrict.dispose();
     buyerCity.dispose();
     buyerPostalCode.dispose();
+    buyerRegion.dispose();
     buyerCountryCode.dispose();
     discount.dispose();
 
@@ -260,6 +277,7 @@ class _InvoicesPageState extends State<InvoicesPage> {
             addressValue.isEmpty ||
             buyerStreetValue.isEmpty ||
             buyerBuildingValue.isEmpty ||
+            buyerAdditionalNumberValue.isEmpty ||
             buyerDistrictValue.isEmpty ||
             buyerCityValue.isEmpty ||
             buyerPostalValue.isEmpty ||
@@ -277,8 +295,9 @@ class _InvoicesPageState extends State<InvoicesPage> {
     }
     if (invoiceKind == 'tax' && buyerCountryValue == 'SA' &&
         (!RegExp(r'^\d{4}$').hasMatch(buyerBuildingValue) ||
+         !RegExp(r'^\d{4}$').hasMatch(buyerAdditionalNumberValue) ||
          !RegExp(r'^\d{5}$').hasMatch(buyerPostalValue))) {
-      _message('العنوان السعودي يتطلب رقم مبنى 4 أرقام ورمزًا بريديًا 5 أرقام');
+      _message('العنوان السعودي يتطلب رقم مبنى ورقمًا إضافيًا من 4 أرقام ورمزًا بريديًا من 5 أرقام');
       return;
     }
 
@@ -293,9 +312,11 @@ class _InvoicesPageState extends State<InvoicesPage> {
         discountAmount: discountValue,
         buyerStreet: buyerStreetValue,
         buyerBuildingNumber: buyerBuildingValue,
+        buyerAdditionalNumber: buyerAdditionalNumberValue,
         buyerDistrict: buyerDistrictValue,
         buyerCity: buyerCityValue,
         buyerPostalCode: buyerPostalValue,
+        buyerRegion: buyerRegionValue,
         buyerCountryCode: buyerCountryValue,
       );
       _message('تم إصدار ${_invoiceKindLabel(invoiceKind)}');

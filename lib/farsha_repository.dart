@@ -45,19 +45,20 @@ class FarshaRepository {
   }
 
   Future<Map<String,dynamic>> loadZatcaInstitutionAddress(String institutionId) async {
-    final row=await client.from('institutions').select('zatca_street_name,zatca_building_number,zatca_district,zatca_city,zatca_postal_code,zatca_country_code').eq('id',institutionId).single();
+    final row=await client.from('institutions').select('zatca_street_name,zatca_building_number,zatca_additional_number,zatca_district,zatca_city,zatca_postal_code,zatca_country_code').eq('id',institutionId).single();
     return Map<String,dynamic>.from(row);
   }
 
-  Future<void> updateZatcaInstitutionAddress({required String institutionId,required String street,required String buildingNumber,required String district,required String city,required String postalCode,String countryCode='SA'}) async {
-    for(final entry in {'اسم الشارع':street,'رقم المبنى':buildingNumber,'الحي':district,'المدينة':city,'الرمز البريدي':postalCode,'رمز الدولة':countryCode}.entries){
+  Future<void> updateZatcaInstitutionAddress({required String institutionId,required String street,required String buildingNumber,required String additionalNumber,required String district,required String city,required String postalCode,String countryCode='SA'}) async {
+    for(final entry in {'اسم الشارع':street,'رقم المبنى':buildingNumber,'الرقم الإضافي':additionalNumber,'الحي':district,'المدينة':city,'الرمز البريدي':postalCode,'رمز الدولة':countryCode}.entries){
       if(entry.value.trim().isEmpty) throw ArgumentError('بيانات ZATCA ناقصة: ${entry.key}');
     }
     final country=countryCode.trim().toUpperCase();
     if(!RegExp(r'^[A-Z]{2}$').hasMatch(country)) throw ArgumentError('رمز الدولة يجب أن يكون حرفين مثل SA');
     if(country=='SA'&&!RegExp(r'^\d{4}$').hasMatch(buildingNumber.trim())) throw ArgumentError('رقم المبنى السعودي يجب أن يكون 4 أرقام');
+    if(country=='SA'&&!RegExp(r'^\d{4}$').hasMatch(additionalNumber.trim())) throw ArgumentError('الرقم الإضافي السعودي يجب أن يكون 4 أرقام');
     if(country=='SA'&&!RegExp(r'^\d{5}$').hasMatch(postalCode.trim())) throw ArgumentError('الرمز البريدي السعودي يجب أن يكون 5 أرقام');
-    await client.from('institutions').update({'zatca_street_name':street.trim(),'zatca_building_number':buildingNumber.trim(),'zatca_district':district.trim(),'zatca_city':city.trim(),'zatca_postal_code':postalCode.trim(),'zatca_country_code':country}).eq('id',institutionId);
+    await client.from('institutions').update({'zatca_street_name':street.trim(),'zatca_building_number':buildingNumber.trim(),'zatca_additional_number':additionalNumber.trim(),'zatca_district':district.trim(),'zatca_city':city.trim(),'zatca_postal_code':postalCode.trim(),'zatca_country_code':country}).eq('id',institutionId);
   }
 
   Future<String> claimInvitation(String code) async {
@@ -366,12 +367,14 @@ class FarshaRepository {
     required double discountAmount,
     String buyerStreet = '',
     String buyerBuildingNumber = '',
+    String buyerAdditionalNumber = '',
     String buyerDistrict = '',
     String buyerCity = '',
     String buyerPostalCode = '',
+    String buyerRegion = '',
     String buyerCountryCode = '',
   }) async {
-    final result = await client.rpc('issue_tax_invoice_v2', params: {
+    final result = await client.rpc('issue_tax_invoice_v3', params: {
       'p_sale_id': saleId,
       'p_customer_name': customerName.trim(),
       'p_customer_cr': customerCommercialRegistration.trim(),
@@ -381,9 +384,11 @@ class FarshaRepository {
       'p_discount': discountAmount,
       'p_buyer_street': buyerStreet.trim(),
       'p_buyer_building_number': buyerBuildingNumber.trim(),
+      'p_buyer_additional_number': buyerAdditionalNumber.trim(),
       'p_buyer_district': buyerDistrict.trim(),
       'p_buyer_city': buyerCity.trim(),
       'p_buyer_postal_code': buyerPostalCode.trim(),
+      'p_buyer_region': buyerRegion.trim(),
       'p_buyer_country_code': buyerCountryCode.trim().toUpperCase(),
     });
     return result as String;
