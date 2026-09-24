@@ -297,7 +297,7 @@ Deno.test("Phase-2 standard QR profile is tags 1-8 and excludes tag 9", async ()
     invoiceKind: "tax",
     sellerName: "Farsha Test Seller",
     sellerVatNumber: "310000000000003",
-    issuedAt: "2026-09-23T12:34:56Z",
+    issuedAt: "2026-09-23T12:34:56.987654Z",
     taxInclusiveAmount: 115,
     vatAmount: 15,
     invoiceHash: hash,
@@ -307,6 +307,11 @@ Deno.test("Phase-2 standard QR profile is tags 1-8 and excludes tag 9", async ()
   assert(
     [...decodePhase2Qr(qr).keys()].join(",") === "1,2,3,4,5,6,7,8",
     "standard QR tags mismatch",
+  );
+  assert(
+    new TextDecoder().decode(decodePhase2Qr(qr).get(3)) ===
+      "2026-09-23T12:34:56Z",
+    "QR timestamp must match UBL whole-second precision",
   );
 });
 
