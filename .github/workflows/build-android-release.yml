@@ -2,7 +2,7 @@ name: Build Android Release APK
 
 on:
   push:
-    branches: [main, multi-branch-partners, ui-ux-v2, zatca-financial-snapshot, zatca-ubl-xml]
+    branches: [main, multi-branch-partners, ui-ux-v2, zatca-financial-snapshot, zatca-ubl-xml, zatca-security]
   release:
     types: [published]
   workflow_dispatch:
@@ -14,6 +14,18 @@ jobs:
   build-release-apk:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -46,26 +58,77 @@ jobs:
           PY
           grep -q 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml
           dart run flutter_launcher_icons
-      - name: Set up Deno for Stage 2 backend tests
+      - name: Set up Deno for ZATCA backend tests
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - name: UBL golden, parity and KSA business-rule tests
+      - name: UBL, parity, KSA rule and security tests
         run: >-
           deno test
           supabase/functions/generate-zatca-ubl/ubl_test.ts
+          supabase/functions/generate-zatca-ubl/security_test.ts
           test/ubl_xml_test.ts
       - name: UBL 2.1 XSD validation
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libxml2-utils unzip
+          sudo apt-get install -y -qq libxml2-utils postgresql-client unzip
           mkdir -p build
           deno run --allow-write supabase/functions/generate-zatca-ubl/xsd_fixture.ts
+          deno run --allow-write supabase/functions/generate-zatca-ubl/security_fixture.ts
           curl -fsSL https://docs.oasis-open.org/ubl/os-UBL-2.1/UBL-2.1.zip -o /tmp/ubl21.zip
           unzip -q /tmp/ubl21.zip -d /tmp/ubl21
           XSD=$(find /tmp/ubl21 -path '*/xsd/maindoc/UBL-Invoice-2.1.xsd' | head -1)
           test -n "$XSD"
           xmllint --noout --schema "$XSD" build/zatca-stage2-sample.xml
+          xmllint --noout --schema "$XSD" build/zatca-stage3-signed-simplified.xml
+      - name: ZATCA CSR profile validation
+        run: |
+          mkdir -p build
+          deno run --allow-write supabase/functions/generate-zatca-ubl/csr_fixture.ts
+          KEY="$RUNNER_TEMP/zatca-stage3-test-key.pem"
+          CSR="$RUNNER_TEMP/zatca-stage3-test.csr"
+          openssl ecparam -name secp256k1 -genkey -noout -out "$KEY"
+          openssl req -new -sha256 -key "$KEY" \
+            -config build/zatca-stage3-test-csr.cnf -extensions req_ext -out "$CSR"
+          openssl req -in "$CSR" -verify -noout
+          openssl req -in "$CSR" -text -noout | grep -q 'secp256k1'
+          openssl req -in "$CSR" -text -noout | grep -q '310000000000003'
+      - name: Atomic ICV PIH and real concurrency validation
+        env:
+          PGPASSWORD: postgres
+        run: |
+          DB="postgresql://postgres@127.0.0.1:5432/postgres"
+          psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/zatca_stage3_isolated_schema.sql
+          psql "$DB" -v ON_ERROR_STOP=1 -f supabase/migrations/20260924080000_zatca_security_architecture.sql
+          psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/zatca_stage3_isolated_seed.sql
+
+          psql "$DB" -v ON_ERROR_STOP=1 >"$RUNNER_TEMP/issuer-a.log" 2>&1 <<'SQL' &
+          begin;
+          select * from public.reserve_zatca_issuance(
+            '00000000-0000-4000-8000-000000000004',
+            '00000000-0000-4000-8000-000000000006',
+            repeat('A',43)||'=','ci-race-a'
+          );
+          select pg_sleep(2);
+          commit;
+          SQL
+          FIRST_PID=$!
+          sleep 0.25
+          set +e
+          psql "$DB" -v ON_ERROR_STOP=1 >"$RUNNER_TEMP/issuer-b.log" 2>&1 <<'SQL'
+          select * from public.reserve_zatca_issuance(
+            '00000000-0000-4000-8000-000000000005',
+            '00000000-0000-4000-8000-000000000006',
+            repeat('B',43)||'=','ci-race-b'
+          );
+          SQL
+          SECOND_STATUS=$?
+          set -e
+          wait "$FIRST_PID"
+          test "$SECOND_STATUS" -ne 0
+          grep -q 'EGS issuance is already pending' "$RUNNER_TEMP/issuer-b.log"
+          test "$(psql "$DB" -Atc "select count(*) from public.zatca_issuance_reservations where egs_id='00000000-0000-4000-8000-000000000006' and icv=1")" = "1"
+          psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/zatca_stage3_atomic_isolated.sql
       - name: Static analysis and tests
         run: |
           flutter analyze --no-fatal-infos
