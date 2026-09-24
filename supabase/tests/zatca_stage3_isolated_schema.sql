@@ -21,6 +21,10 @@ create table public.invoices(
   seller_id uuid not null references public.profiles(id)
 );
 
+-- Supabase grants the service role access to existing public tables. Mirror
+-- that baseline here because the issuance RPCs deliberately run as invoker.
+grant select on table public.invoices to service_role;
+
 create function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
 create function public.has_institution_role(uuid,public.institution_role[])
 returns boolean language sql stable as $$ select true $$;
