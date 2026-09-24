@@ -99,11 +99,32 @@ jobs:
         run: |
           DB="postgresql://postgres@127.0.0.1:5432/postgres"
           psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/zatca_stage3_isolated_schema.sql
+          psql "$DB" -v ON_ERROR_STOP=1 <<'SQL'
+          insert into public.profiles(id) values('10000000-0000-4000-8000-000000000001');
+          insert into public.institutions(id) values('10000000-0000-4000-8000-000000000002');
+          insert into public.branches(id,institution_id) values(
+            '10000000-0000-4000-8000-000000000003',
+            '10000000-0000-4000-8000-000000000002'
+          );
+          insert into public.invoices(id,institution_id,branch_id,issued_at,invoice_kind,seller_id)
+          values(
+            '10000000-0000-4000-8000-000000000004',
+            '10000000-0000-4000-8000-000000000002',
+            '10000000-0000-4000-8000-000000000003',
+            '2026-01-01T00:00:00Z','simplified',
+            '10000000-0000-4000-8000-000000000001'
+          );
+          SQL
+          HISTORICAL_BEFORE="$(psql "$DB" -Atc "select row_to_json(i)::text from public.invoices i where id='10000000-0000-4000-8000-000000000004'")"
           psql "$DB" -v ON_ERROR_STOP=1 -f supabase/migrations/20260924080000_zatca_security_architecture.sql
+          HISTORICAL_AFTER="$(psql "$DB" -Atc "select row_to_json(i)::text from public.invoices i where id='10000000-0000-4000-8000-000000000004'")"
+          test "$HISTORICAL_BEFORE" = "$HISTORICAL_AFTER"
+          test "$(psql "$DB" -Atc "select count(*) from public.zatca_issuance_reservations")" = "0"
           psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/zatca_stage3_isolated_seed.sql
 
           psql "$DB" -v ON_ERROR_STOP=1 >"$RUNNER_TEMP/issuer-a.log" 2>&1 <<'SQL' &
           begin;
+          set role service_role;
           select * from public.reserve_zatca_issuance(
             '00000000-0000-4000-8000-000000000004',
             '00000000-0000-4000-8000-000000000006',
@@ -116,6 +137,7 @@ jobs:
           sleep 0.25
           set +e
           psql "$DB" -v ON_ERROR_STOP=1 >"$RUNNER_TEMP/issuer-b.log" 2>&1 <<'SQL'
+          set role service_role;
           select * from public.reserve_zatca_issuance(
             '00000000-0000-4000-8000-000000000005',
             '00000000-0000-4000-8000-000000000006',

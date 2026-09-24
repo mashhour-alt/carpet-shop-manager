@@ -2,7 +2,7 @@
 -- migration and real concurrent connections without touching Supabase.
 create role anon;
 create role authenticated;
-create role service_role;
+create role service_role bypassrls;
 create schema auth;
 
 create type public.institution_role as enum ('owner','accountant','seller');
@@ -22,7 +22,6 @@ create table public.invoices(
 );
 
 create function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
-create function auth.role() returns text language sql stable as $$ select 'service_role'::text $$;
 create function public.has_institution_role(uuid,public.institution_role[])
 returns boolean language sql stable as $$ select true $$;
 create function public.can_access_branch(uuid)

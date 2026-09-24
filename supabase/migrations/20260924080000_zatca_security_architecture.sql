@@ -171,7 +171,7 @@ create index zatca_security_audit_invoice_idx
 create or replace function public.validate_zatca_egs_branch_assignment()
 returns trigger
 language plpgsql
-security definer
+security invoker
 set search_path=''
 as $$
 declare
@@ -262,7 +262,7 @@ create or replace function public.reserve_zatca_issuance(
   idempotent boolean
 )
 language plpgsql
-security definer
+security invoker
 set search_path=''
 as $$
 declare
@@ -271,9 +271,6 @@ declare
   v_existing public.zatca_issuance_reservations%rowtype;
   v_pending_invoice uuid;
 begin
-  if current_user not in('postgres','service_role','supabase_admin') and coalesce(auth.role(),'')<>'service_role' then
-    raise exception 'Service role required';
-  end if;
   if p_business_xml_sha256 is null or p_business_xml_sha256 !~ '^[A-Za-z0-9+/]{43}=$' then
     raise exception 'Business XML SHA-256 must be a 32-byte Base64 digest';
   end if;
@@ -345,16 +342,13 @@ create or replace function public.record_zatca_issuance_failure(
   p_request_id text default null
 ) returns integer
 language plpgsql
-security definer
+security invoker
 set search_path=''
 as $$
 declare
   v_reservation public.zatca_issuance_reservations%rowtype;
   v_institution_id uuid;
 begin
-  if current_user not in('postgres','service_role','supabase_admin') and coalesce(auth.role(),'')<>'service_role' then
-    raise exception 'Service role required';
-  end if;
   if p_failure_code is null or length(trim(p_failure_code)) not between 1 and 120 then
     raise exception 'Failure code must contain 1-120 characters';
   end if;
@@ -399,7 +393,7 @@ create or replace function public.finalize_zatca_issuance(
   idempotent boolean
 )
 language plpgsql
-security definer
+security invoker
 set search_path=''
 as $$
 declare
@@ -409,9 +403,6 @@ declare
   v_certificate public.zatca_egs_certificates%rowtype;
   v_final public.zatca_invoice_security_states%rowtype;
 begin
-  if current_user not in('postgres','service_role','supabase_admin') and coalesce(auth.role(),'')<>'service_role' then
-    raise exception 'Service role required';
-  end if;
   if p_invoice_hash !~ '^[A-Za-z0-9+/]{43}=$' or
      p_signed_properties_digest !~ '^[A-Za-z0-9+/]{43}=$' then
     raise exception 'Invoice and SignedProperties hashes must be 32-byte Base64 digests';
