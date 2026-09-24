@@ -2,7 +2,7 @@ name: Build Android Release APK
 
 on:
   push:
-    branches: [main, multi-branch-partners, ui-ux-v2, zatca-financial-snapshot, zatca-ubl-xml, zatca-security]
+    branches: [main, multi-branch-partners, ui-ux-v2, zatca-financial-snapshot, zatca-ubl-xml, zatca-security, zatca-stage4-validation]
   release:
     types: [published]
   workflow_dispatch:

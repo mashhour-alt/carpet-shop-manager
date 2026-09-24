@@ -1,0 +1,13 @@
+********** Welcome to ZATCA E-Invoice Java SDK 3.0.8 *********************
+[INFO] XsdValidator - Validate XSD for invoice: farsha-official-sdk-test-csid-simplified.xml
+[INFO] ValidationProcessorImpl - [XSD] validation result : PASSED
+[INFO] ValidationProcessorImpl - [EN] validation result : PASSED
+[INFO] ValidationProcessorImpl - [KSA] validation result : PASSED
+[INFO] ValidationProcessorImpl - [QR] validation result : FAILED
+[ERROR] ValidationProcessorImpl - qr validation errors :
+[ERROR] ValidationProcessorImpl - CODE : QR-Code, MESSAGE : Invalid QR code format, Please follow the ZATCA QR code specifications
+[INFO] InvoiceValidationService - *** GLOBAL VALIDATION RESULT = FAILED
+
+Raw output retained without converting the SDK error to a warning or pass.
+The source artifact used only the expired public test certificate/key material
+distributed inside the official SDK package; no production credential was used.

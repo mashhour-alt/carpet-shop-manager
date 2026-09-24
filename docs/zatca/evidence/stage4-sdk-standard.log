@@ -1,0 +1,10 @@
+********** Welcome to ZATCA E-Invoice Java SDK 3.0.8 *********************
+[INFO] XsdValidator - Validate XSD for invoice: zatca-stage2-sample.xml
+[INFO] ValidationProcessorImpl - [XSD] validation result : PASSED
+[INFO] ValidationProcessorImpl - [EN] validation result : PASSED
+[INFO] ValidationProcessorImpl - [KSA] validation result : PASSED
+[INFO] ValidationProcessorImpl - [PIH] validation result : PASSED
+[INFO] InvoiceValidationService - *** GLOBAL VALIDATION RESULT = PASSED
+
+This is the Standard pre-clearance artifact. It includes ICV and PIH, but no
+locally-created Standard signature or final QR; those are clearance outputs.
