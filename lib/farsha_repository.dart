@@ -304,7 +304,7 @@ class FarshaRepository {
   Future<List<QuotationRecord>> loadQuotations(String institutionId) async {
     final rows = await client
         .from('quotations')
-        .select('id,customer_name,customer_commercial_registration,customer_tax_number,issue_date,valid_until,notes,subtotal,vat_amount,total,status,quotation_items(inventory_id,item_name,color,length,width,area,price_per_sqm,line_total)')
+        .select('id,customer_name,customer_commercial_registration,customer_tax_number,issue_date,valid_until,notes,subtotal,discount_amount,vat_amount,total,addons,status,quotation_items(inventory_id,item_name,color,length,width,area,price_per_sqm,line_total)')
         .eq('institution_id', institutionId)
         .order('created_at', ascending: false);
     return (rows as List)
@@ -323,8 +323,10 @@ class FarshaRepository {
     required double pricePerSquareMeter,
     required DateTime validUntil,
     String notes = '',
+    List<SaleAddonInput> addons = const [],
+    double discount = 0,
   }) async {
-    final result = await client.rpc('create_quotation', params: {
+    final result = await client.rpc('create_quotation_v2', params: {
       'p_institution_id': institutionId,
       'p_seller_id': sellerId,
       'p_inventory_id': inventoryId,
@@ -335,6 +337,8 @@ class FarshaRepository {
       'p_price_per_sqm': pricePerSquareMeter,
       'p_valid_until': validUntil.toIso8601String().split('T').first,
       'p_notes': notes.trim(),
+      'p_addons': addons.map((addon) => addon.toMap()).toList(),
+      'p_discount': discount,
     });
     return result as String;
   }

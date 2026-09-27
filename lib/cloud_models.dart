@@ -253,8 +253,10 @@ class QuotationRecord {
     required this.validUntil,
     required this.notes,
     required this.subtotal,
+    required this.discountAmount,
     required this.vatAmount,
     required this.total,
+    required this.addons,
     required this.status,
     required this.items,
   });
@@ -267,8 +269,10 @@ class QuotationRecord {
   final DateTime validUntil;
   final String notes;
   final double subtotal;
+  final double discountAmount;
   final double vatAmount;
   final double total;
+  final List<SaleAddonInput> addons;
   final String status;
   final List<QuotationItemRecord> items;
 
@@ -281,9 +285,13 @@ class QuotationRecord {
         validUntil: DateTime.parse(map['valid_until'] as String),
         notes: map['notes'] as String,
         subtotal: (map['subtotal'] as num).toDouble(),
+        discountAmount: (map['discount_amount'] as num?)?.toDouble() ?? 0,
         vatAmount: (map['vat_amount'] as num).toDouble(),
         total: (map['total'] as num).toDouble(),
         status: map['status'] as String,
+        addons: ((map['addons'] as List?) ?? const [])
+            .map((addon) => SaleAddonInput.fromMap(addon as Map<String, dynamic>))
+            .toList(),
         items: (map['quotation_items'] as List)
             .map((item) => QuotationItemRecord.fromMap(item as Map<String, dynamic>))
             .toList(),
@@ -563,6 +571,13 @@ class SaleAddonInput {
   const SaleAddonInput({required this.addonTypeId,required this.name,required this.unit,required this.quantity,required this.saleUnitPrice,required this.costUnitPrice,this.supplierId});
   final String? addonTypeId; final String name; final String unit; final double quantity; final double saleUnitPrice; final double costUnitPrice; final String? supplierId;
   Map<String,dynamic> toMap()=>{'addon_type_id':addonTypeId,'name':name,'unit':unit,'quantity':quantity,'sale_unit_price':saleUnitPrice,'cost_unit_price':costUnitPrice,'supplier_id':supplierId};
+  factory SaleAddonInput.fromMap(Map<String,dynamic> m)=>SaleAddonInput(
+    addonTypeId:m['addon_type_id'] as String?,name:m['name'] as String? ?? '',
+    unit:m['unit'] as String? ?? 'piece',quantity:(m['quantity'] as num?)?.toDouble() ?? 0,
+    saleUnitPrice:(m['sale_unit_price'] as num?)?.toDouble() ?? 0,
+    costUnitPrice:(m['cost_unit_price'] as num?)?.toDouble() ?? 0,
+    supplierId:m['supplier_id'] as String?,
+  );
   double get saleTotal=>quantity*saleUnitPrice;
 }
 

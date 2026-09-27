@@ -9,6 +9,7 @@ import 'package:printing/printing.dart';
 
 import 'cloud_models.dart';
 import 'farsha_repository.dart';
+import 'operational_sale_totals.dart';
 
 double _quoteNumber(TextEditingController controller) =>
     double.tryParse(controller.text.trim()) ?? 0;
@@ -33,17 +34,65 @@ class _QuotationsPageState extends State<QuotationsPage> {
       widget.repository.loadInventory(widget.membership.institutionId);
   late Future<List<PersonOption>> _sellers =
       widget.repository.loadSellers(widget.membership.institutionId);
+  late Future<List<AddonTypeRecord>> _addonTypes =
+      widget.repository.loadAddonTypes(widget.membership.institutionId);
 
   void _reload() => setState(() {
         _quotations = widget.repository.loadQuotations(widget.membership.institutionId);
         _inventory = widget.repository.loadInventory(widget.membership.institutionId);
         _sellers = widget.repository.loadSellers(widget.membership.institutionId);
+        _addonTypes = widget.repository.loadAddonTypes(widget.membership.institutionId);
       });
 
   void _message(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
-  Future<void> _create(List<InventoryRecord> inventory, List<PersonOption> sellers) async {
+  Future<SaleAddonInput?> _pickAddon(List<AddonTypeRecord> types, double area) async {
+    if (types.isEmpty) {
+      _message('أضف أنواع الإضافات من إعدادات المؤسسة');
+      return null;
+    }
+    var type = types.first;
+    final quantity = TextEditingController(
+        text: type.calculationBasis == 'sale_area' ? area.toStringAsFixed(2) : '1');
+    final price = TextEditingController(text: type.defaultSalePrice.toStringAsFixed(2));
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('إضافة إلى عرض السعر'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            DropdownButtonFormField<String>(
+              initialValue: type.id,
+              decoration: const InputDecoration(labelText: 'الإضافة'),
+              items: types.map((item) => DropdownMenuItem(value: item.id, child: Text(item.name))).toList(),
+              onChanged: (value) => setDialogState(() {
+                type = types.firstWhere((item) => item.id == value);
+                quantity.text = type.calculationBasis == 'sale_area' ? area.toStringAsFixed(2) : '1';
+                price.text = type.defaultSalePrice.toStringAsFixed(2);
+              }),
+            ),
+            const SizedBox(height: 10),
+            TextField(controller: quantity, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'الكمية (${type.unit})')),
+            const SizedBox(height: 10),
+            TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'سعر البيع للوحدة قبل VAT')),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('إضافة')),
+          ],
+        ),
+      ),
+    );
+    final result = save == true && _quoteNumber(quantity) > 0 && _quoteNumber(price) >= 0
+        ? SaleAddonInput(addonTypeId: type.id, name: type.name, unit: type.unit, quantity: _quoteNumber(quantity), saleUnitPrice: _quoteNumber(price), costUnitPrice: type.defaultCostPrice)
+        : null;
+    quantity.dispose();
+    price.dispose();
+    return result;
+  }
+
+  Future<void> _create(List<InventoryRecord> inventory, List<PersonOption> sellers, List<AddonTypeRecord> addonTypes) async {
     if (inventory.isEmpty || sellers.isEmpty) {
       return _message('أضف مخزونًا وبائعًا أولًا');
     }
@@ -52,7 +101,9 @@ class _QuotationsPageState extends State<QuotationsPage> {
     final customerTax = TextEditingController();
     final length = TextEditingController();
     final price = TextEditingController();
+    final discount = TextEditingController(text: '0');
     final notes = TextEditingController();
+    final addons = <SaleAddonInput>[];
     String inventoryId = inventory.first.id;
     String sellerId = widget.membership.role == InstitutionRole.seller
         ? widget.repository.userId
@@ -61,7 +112,14 @@ class _QuotationsPageState extends State<QuotationsPage> {
     final save = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (context, setDialogState) {
+          final totals = OperationalSaleTotals.calculate(
+            carpetArea: _quoteNumber(length) * 4,
+            carpetUnitPrice: _quoteNumber(price),
+            addonSales: addons.fold(0, (sum, addon) => sum + addon.saleTotal),
+            discount: _quoteNumber(discount),
+          );
+          return AlertDialog(
           title: const Text('عرض سعر جديد'),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -92,10 +150,35 @@ class _QuotationsPageState extends State<QuotationsPage> {
               TextField(controller: customerTax, decoration: const InputDecoration(labelText: 'الرقم الضريبي للمشتري (اختياري)')),
               const SizedBox(height: 10),
               Row(children: [
-                Expanded(child: TextField(controller: length, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الطول م'))),
+                Expanded(child: TextField(controller: length, onChanged: (_) => setDialogState(() {}), keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الطول م'))),
                 const SizedBox(width: 8),
-                Expanded(child: TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'السعر/م²'))),
+                Expanded(child: TextField(controller: price, onChanged: (_) => setDialogState(() {}), keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'السعر/م² قبل VAT'))),
               ]),
+              const SizedBox(height: 10),
+              TextField(controller: discount, onChanged: (_) => setDialogState(() {}), keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الخصم')),
+              const SizedBox(height: 6),
+              Align(alignment: Alignment.centerRight, child: OutlinedButton.icon(
+                onPressed: () async {
+                  final addon = await _pickAddon(addonTypes, _quoteNumber(length) * 4);
+                  if (addon != null) setDialogState(() => addons.add(addon));
+                },
+                icon: const Icon(Icons.add), label: const Text('إضافة لباد / تركيب / توصيل'),
+              )),
+              ...addons.asMap().entries.map((entry) => ListTile(
+                dense: true, contentPadding: EdgeInsets.zero,
+                title: Text('${entry.value.name} × ${entry.value.quantity.toStringAsFixed(2)}'),
+                subtitle: Text('${entry.value.saleTotal.toStringAsFixed(2)} ⃁ قبل VAT'),
+                trailing: IconButton(icon: const Icon(Icons.delete_outline), onPressed: () => setDialogState(() => addons.removeAt(entry.key))),
+              )),
+              Container(
+                width: double.infinity, padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('قيمة العرض قبل VAT: ${totals.taxExclusiveAmount.toStringAsFixed(2)} ⃁'),
+                  Text('VAT 15%: ${totals.vatAmount.toStringAsFixed(2)} ⃁'),
+                  Text('الإجمالي المطلوب: ${totals.payableAmount.toStringAsFixed(2)} ⃁', style: const TextStyle(fontWeight: FontWeight.bold)),
+                ]),
+              ),
               const SizedBox(height: 10),
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -114,14 +197,15 @@ class _QuotationsPageState extends State<QuotationsPage> {
               ),
               TextField(controller: notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات')),
               const SizedBox(height: 8),
-              const Text('العرض ثابت 4 م • ضريبة القيمة المضافة 15%'),
+              const Text('العرض ثابت 4 م • السعر المدخل قبل VAT'),
             ]),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
             FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ')),
           ],
-        ),
+          );
+        },
       ),
     );
     final customerName = customer.text.trim();
@@ -129,12 +213,14 @@ class _QuotationsPageState extends State<QuotationsPage> {
     final customerTaxValue = customerTax.text.trim();
     final lengthValue = _quoteNumber(length);
     final priceValue = _quoteNumber(price);
+    final discountValue = _quoteNumber(discount);
     final notesValue = notes.text.trim();
-    for (final controller in [customer, customerCr, customerTax, length, price, notes]) {
+    for (final controller in [customer, customerCr, customerTax, length, price, discount, notes]) {
       controller.dispose();
     }
     if (save != true) return;
-    if (customerName.isEmpty || lengthValue <= 0 || priceValue < 0) {
+    final gross = lengthValue * 4 * priceValue + addons.fold(0, (sum, addon) => sum + addon.saleTotal);
+    if (customerName.isEmpty || lengthValue <= 0 || priceValue < 0 || discountValue < 0 || discountValue > gross) {
       return _message('راجع اسم المشتري والطول والسعر');
     }
     try {
@@ -149,6 +235,8 @@ class _QuotationsPageState extends State<QuotationsPage> {
         pricePerSquareMeter: priceValue,
         validUntil: validUntil,
         notes: notesValue,
+        addons: addons,
+        discount: discountValue,
       );
       _message('تم حفظ عرض السعر بدون خصم المخزون');
       _reload();
@@ -213,8 +301,10 @@ class _QuotationsPageState extends State<QuotationsPage> {
           future: _inventory,
           builder: (context, inventorySnapshot) => FutureBuilder<List<PersonOption>>(
             future: _sellers,
-            builder: (context, sellerSnapshot) {
-              if (!quoteSnapshot.hasData || !inventorySnapshot.hasData || !sellerSnapshot.hasData) {
+            builder: (context, sellerSnapshot) => FutureBuilder<List<AddonTypeRecord>>(
+              future: _addonTypes,
+              builder: (context, addonSnapshot) {
+              if (!quoteSnapshot.hasData || !inventorySnapshot.hasData || !sellerSnapshot.hasData || !addonSnapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
               final quotations = quoteSnapshot.data!;
@@ -222,7 +312,7 @@ class _QuotationsPageState extends State<QuotationsPage> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   FilledButton.icon(
-                    onPressed: () => _create(inventorySnapshot.data!, sellerSnapshot.data!),
+                    onPressed: () => _create(inventorySnapshot.data!, sellerSnapshot.data!, addonSnapshot.data!),
                     icon: const Icon(Icons.request_quote_outlined),
                     label: const Text('عرض سعر جديد'),
                   ),
@@ -246,7 +336,8 @@ class _QuotationsPageState extends State<QuotationsPage> {
                       )),
                 ],
               );
-            },
+              },
+            ),
           ),
         ),
       );
@@ -397,11 +488,24 @@ class QuotationDocument extends StatelessWidget {
                         Expanded(child: Text(item.lineTotal.toStringAsFixed(2))),
                       ]),
                     )),
+                ...quotation.addons.map((addon) => Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Colors.black12))),
+                      child: Row(children: [
+                        Expanded(flex: 3, child: Text(addon.name)),
+                        Expanded(child: Text('—')),
+                        Expanded(child: Text(addon.unit)),
+                        Expanded(child: Text(addon.quantity.toStringAsFixed(2))),
+                        Expanded(child: Text(addon.saleUnitPrice.toStringAsFixed(2))),
+                        Expanded(child: Text(addon.saleTotal.toStringAsFixed(2))),
+                      ]),
+                    )),
                 const SizedBox(height: 24),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: SizedBox(width: 270, child: Column(children: [
-                    _totalLine('الإجمالي قبل الضريبة', quotation.subtotal),
+                    if (quotation.discountAmount > 0) _totalLine('الخصم', quotation.discountAmount),
+                    _totalLine(quotation.discountAmount > 0 ? 'صافي قبل الضريبة' : 'الإجمالي قبل الضريبة', quotation.subtotal),
                     _totalLine('VAT 15%', quotation.vatAmount),
                     const Divider(),
                     _totalLine('الإجمالي شامل الضريبة', quotation.total, bold: true),
