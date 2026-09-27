@@ -519,7 +519,7 @@ class FarshaRepository {
   }
 
   Future<List<Map<String, dynamic>>> loadRecentActivity(String institutionId, {String? branchId, int limit = 8}) async {
-    var query = client.from('sales').select('id,customer_name,total,created_at,branch_id,profiles!sales_seller_id_fkey(full_name)').eq('institution_id', institutionId).eq('status', 'completed');
+    var query = client.from('sales').select('id,customer_name,total,tax_exclusive_amount,created_at,branch_id,profiles!sales_seller_id_fkey(full_name)').eq('institution_id', institutionId).eq('status', 'completed');
     if (branchId != null) query = query.eq('branch_id', branchId);
     final rows = await query.order('created_at', ascending: false).limit(limit);
     return List<Map<String, dynamic>>.from(rows);

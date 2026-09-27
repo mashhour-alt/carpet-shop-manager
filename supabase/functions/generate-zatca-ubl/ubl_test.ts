@@ -72,6 +72,39 @@ Deno.test("A simplified one line", () => {
     "two document tax totals plus one line tax total",
   );
 });
+Deno.test("A2 entered price stays VAT-exclusive through UBL totals", () => {
+  const invoice = base({
+    line_extension_amount: 1000,
+    tax_exclusive_amount: 1000,
+    vat_amount: 150,
+    tax_inclusive_amount: 1150,
+    payable_amount: 1150,
+  });
+  const xml = build(invoice, [line({
+    quantity: 20,
+    unit_code: "MTK",
+    unit_price: 50,
+    gross_amount: 1000,
+    taxable_amount: 1000,
+    vat_amount: 150,
+    total_with_vat: 1150,
+    description: "Carpet",
+  })]);
+  assert(xml.includes('unitCode="MTK">20</cbc:InvoicedQuantity>'), "area");
+  assert(
+    xml.includes('currencyID="SAR">50.00</cbc:PriceAmount>'),
+    "VAT-exclusive unit price",
+  );
+  assert(
+    xml.includes('currencyID="SAR">1000.00</cbc:TaxExclusiveAmount>'),
+    "tax exclusive",
+  );
+  assert(xml.includes('currencyID="SAR">150.00</cbc:TaxAmount>'), "VAT total");
+  assert(
+    xml.includes('currencyID="SAR">1150.00</cbc:PayableAmount>'),
+    "payable",
+  );
+});
 Deno.test("B multiple items", () => {
   const i = base({
     line_extension_amount: 150,

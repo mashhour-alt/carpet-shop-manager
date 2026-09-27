@@ -213,7 +213,8 @@ class _OwnerDashboardV2State extends State<OwnerDashboardV2> {
           const SectionTitle('آخر العمليات'),
           if (d.recent.isEmpty) const EmptyState(title: 'لا توجد عمليات حديثة', icon: Icons.history_rounded) else ...d.recent.take(6).map((x) {
             final seller = x['profiles'] as Map<String, dynamic>?;
-            return ListTile(contentPadding: EdgeInsets.zero, leading: const CircleAvatar(backgroundColor: Color(0xffF3E9EA), child: Icon(Icons.shopping_bag_outlined, color: farshaBurgundy)), title: Text((x['customer_name'] as String?)?.isNotEmpty == true ? x['customer_name'] as String : 'عملية بيع'), subtitle: Text('${seller?['full_name'] ?? '—'} • ${DateTime.parse(x['created_at'] as String).toLocal().toString().substring(0,16)}'), trailing: Text(farshaMoney((x['total'] as num).toDouble()), style: const TextStyle(fontWeight: FontWeight.w800)));
+            final operationalAmount=(x['tax_exclusive_amount'] as num?)?.toDouble()??(x['total'] as num).toDouble();
+            return ListTile(contentPadding: EdgeInsets.zero, leading: const CircleAvatar(backgroundColor: Color(0xffF3E9EA), child: Icon(Icons.shopping_bag_outlined, color: farshaBurgundy)), title: Text((x['customer_name'] as String?)?.isNotEmpty == true ? x['customer_name'] as String : 'عملية بيع'), subtitle: Text('${seller?['full_name'] ?? '—'} • ${DateTime.parse(x['created_at'] as String).toLocal().toString().substring(0,16)}'), trailing: Text(farshaMoney(operationalAmount), style: const TextStyle(fontWeight: FontWeight.w800)));
           }),
         ]);
       },

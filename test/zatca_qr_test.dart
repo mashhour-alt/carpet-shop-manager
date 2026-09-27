@@ -11,6 +11,19 @@ InvoiceFinancialSnapshot snapshot(List<InvoiceLineRecord> lines) {
   return InvoiceFinancialSnapshot(version:2,currencyCode:'SAR',taxCategory:'S',lineExtensionAmount:sum((x)=>x.grossAmount),discountAmount:sum((x)=>x.discountAmount),taxExclusiveAmount:sum((x)=>x.taxableAmount),vatAmount:sum((x)=>x.vatAmount),taxInclusiveAmount:sum((x)=>x.totalWithVat),payableAmount:sum((x)=>x.totalWithVat),lines:lines);
 }
 void main() {
+  test('1,000 SAR operational sale remains 1,000 before VAT in PDF and QR',(){
+    final s=snapshot([InvoiceLineRecord(lineNo:1,sourceKind:'carpet',description:'Carpet',quantity:20,unitCode:'MTK',unitPrice:50,grossAmount:1000,discountAmount:0,taxableAmount:1000,taxCategory:'S',vatRate:.15,vatAmount:150,totalWithVat:1150)]);
+    final pdf=InvoiceFinancialPresentation.fromSnapshot(s);
+    final payload=buildZatcaQrPayloadFromSnapshot(sellerName:'Test',sellerVatNumber:'310123456700003',issuedAt:DateTime.utc(2026,9,27),snapshot:s);
+    final qr=decodeZatcaQrPayload(payload);
+    expect(pdf.subtotal,1000);
+    expect(pdf.taxable,1000);
+    expect(pdf.vat,150);
+    expect(pdf.total,1150);
+    expect(qr[4],'1150.00');
+    expect(qr[5],'150.00');
+  });
+
   test('multiple lines and addons preserve canonical parity',(){
     final s=snapshot([line(1,800,20,117),line(2,100,2.50,14.63),line(3,50,2.50,7.13)]);
     expect(s.lines.length,3); expect(s.isInternallyConsistent,isTrue);
