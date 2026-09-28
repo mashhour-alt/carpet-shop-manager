@@ -9,6 +9,7 @@ import 'farsha_repository.dart';
 import 'home_pages.dart' show MembersPage;
 import 'materials_page.dart';
 import 'inventory_workspace_page.dart';
+import 'institution_subscription_page.dart';
 import 'operating_reports_page.dart';
 import 'operations_pages.dart';
 import 'ui_v2_components.dart';
@@ -413,6 +414,7 @@ class MoreHubV2 extends StatelessWidget {
     final manager=membership.role!=InstitutionRole.seller;
     return _HubList(title:'المزيد',subtitle:'الإدارة والتقارير والإعدادات',children:[
       if(membership.role==InstitutionRole.owner)_HubItem('الفروع والشركاء','إدارة الفروع والنسب والنطاقات',Icons.account_tree_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('الفروع والشركاء')),body:BranchesPartnersPage(membership:membership,repository:repository))))),
+      if(membership.role==InstitutionRole.owner)_HubItem('اشتراك المؤسسة','الفترة التجريبية وحالة التفعيل',Icons.workspace_premium_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>InstitutionSubscriptionPage(membership:membership,repository:repository)))),
       if(manager)_HubItem('المستخدمون والصلاحيات','الفريق، البائعون والسائقون',Icons.people_outline,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('المستخدمون')),body:MembersPage(membership:membership,repository:repository))))),
       if(manager)_HubItem('التقارير','تقارير التشغيل والتصدير',Icons.analytics_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('التقارير')),body:OperatingReportsPage(membership:membership,repository:repository))))),
       if(manager)_HubItem('تقرير الفروع','مبيعات وربح ومصروفات كل فرع',Icons.store_mall_directory_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('تقرير الفروع')),body:BranchReportPage(membership:membership,repository:repository))))),
