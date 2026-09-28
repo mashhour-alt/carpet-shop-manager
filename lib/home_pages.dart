@@ -141,9 +141,7 @@ class _InstitutionOnboardingState extends State<InstitutionOnboarding> {
   }
 
   Future<void> _create() async {
-    if ([_name, _cr, _tax, _address, _phone, _email].any((c) => c.text.trim().isEmpty)) {
-      return _show('أكمل جميع بيانات المؤسسة', error: true);
-    }
+    if (_name.text.trim().isEmpty) return _show('اكتب اسم المؤسسة', error: true);
     await _run(() => widget.repository.createInstitution(
           name: _name.text.trim(),
           commercialRegistration: _cr.text.trim(),
@@ -186,15 +184,18 @@ class _InstitutionOnboardingState extends State<InstitutionOnboarding> {
           Text('مرحبًا ${widget.profile.fullName}', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
           if (owner) ...[
-            const Text('أنشئ مؤسستك مرة واحدة، وبعدها ادعُ المحاسب والبائعين.'),
+            const Text('أنشئ مؤسستك وابدأ تشغيلها. بيانات الفوترة الإلكترونية تُستكمل عند تفعيلها.'),
             const SizedBox(height: 16),
             ...[
-              [_name, 'اسم المؤسسة'], [_cr, 'السجل التجاري'], [_tax, 'الرقم الضريبي'],
-              [_address, 'العنوان'], [_phone, 'هاتف المؤسسة'], [_email, 'البريد الإلكتروني'],
+              [_name, 'اسم المؤسسة *'], [_cr, 'السجل التجاري (اختياري)'], [_tax, 'الرقم الضريبي (اختياري)'],
+              [_address, 'العنوان (اختياري)'], [_phone, 'هاتف المؤسسة (اختياري)'], [_email, 'البريد الإلكتروني (اختياري)'],
             ].expand((item) => [
                   TextField(controller: item[0] as TextEditingController, decoration: InputDecoration(labelText: item[1] as String)),
                   const SizedBox(height: 12),
                 ]),
+            const SizedBox(height: 4),
+            const Text('تبدأ المؤسسة بفترة تجريبية. الاشتراك يخص المؤسسة فقط، وليس البائعين أو المحاسبين أو السائقين.'),
+            const SizedBox(height: 12),
             FilledButton(onPressed: _busy ? null : _create, child: const Text('إنشاء المؤسسة')),
           ] else ...[
             const Text('اطلب كود الدعوة من صاحب المؤسسة أو المحاسب.'),
