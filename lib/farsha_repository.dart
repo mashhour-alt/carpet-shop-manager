@@ -70,6 +70,12 @@ class FarshaRepository {
     return result as String;
   }
 
+  Future<Map<String, dynamic>?> loadSubscriptionEntitlement(String institutionId) async {
+    final rows = await client.rpc('institution_subscription_entitlement', params: {'p_institution_id': institutionId});
+    if (rows is! List || rows.isEmpty) return null;
+    return Map<String, dynamic>.from(rows.first as Map);
+  }
+
   Future<Map<String, int>> loadInstitutionCounts(String institutionId) async {
     final suppliers = await client
         .from('suppliers')
