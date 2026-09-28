@@ -645,6 +645,9 @@ class DriverHome extends StatefulWidget {
 
 class _DriverHomeState extends State<DriverHome> {
   late Future<List<DriverTrip>> _trips = widget.repository.loadDriverTrips();
+  late Future<List<Map<String,dynamic>>> _connections = widget.repository.loadMyDriverConnections();
+
+  void _reload() => setState(() { _trips = widget.repository.loadDriverTrips(); _connections = widget.repository.loadMyDriverConnections(); });
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -652,7 +655,7 @@ class _DriverHomeState extends State<DriverHome> {
       child: FutureBuilder<List<DriverTrip>>(
         future: _trips,
         builder: (context, snapshot) {
-          if (snapshot.hasError) return ErrorPage(message: '${snapshot.error}', retry: () => setState(() => _trips = widget.repository.loadDriverTrips()));
+          if (snapshot.hasError) return ErrorPage(message: '${snapshot.error}', retry: _reload);
           if (!snapshot.hasData) return const BrandedLoading();
           final trips = snapshot.data!;
           final now = DateTime.now();
@@ -663,10 +666,18 @@ class _DriverHomeState extends State<DriverHome> {
           final delivered = today.where((x) => x.paymentStatus == 'paid').length;
           final next = today.where((x) => x.paymentStatus != 'paid').firstOrNull;
           return RefreshIndicator(
-            onRefresh: () async => setState(() => _trips = widget.repository.loadDriverTrips()),
+            onRefresh: () async => _reload(),
             child: ListView(padding: const EdgeInsets.fromLTRB(16,14,16,24), children: [
               DashboardHeader(name: widget.profile.fullName, institution: 'فرشة', subtitle: 'السائق'),
               const SizedBox(height: 16),
+              FutureBuilder<List<Map<String,dynamic>>>(future:_connections,builder:(context,cs){
+                if(!cs.hasData)return const SizedBox.shrink(); final pending=cs.data!.where((x)=>x['status']=='pending').toList();
+                if(pending.isEmpty)return const SizedBox.shrink();
+                return Card(child:Column(children:[for(final c in pending)ListTile(
+                  leading:const Icon(Icons.storefront_outlined),title:Text(c['institution_name'] as String),subtitle:const Text('دعوة للعمل مع المؤسسة'),
+                  trailing:FilledButton(onPressed:() async {await widget.repository.acceptDriverConnection(c['institution_id'] as String);_reload();},child:const Text('قبول')),
+                )]));
+              }),
               Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [
                 ProgressRing(value: today.isEmpty ? 0 : delivered/today.length, centerText: '${today.length}\nمشوار'),
                 const SizedBox(width: 18),
