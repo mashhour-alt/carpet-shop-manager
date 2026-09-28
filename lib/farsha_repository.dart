@@ -33,13 +33,14 @@ class FarshaRepository {
     required String phone,
     required String email,
   }) async {
-    final result = await client.rpc('create_institution', params: {
+    final result = await client.rpc('create_institution_v2', params: {
       'p_name': name,
       'p_cr': commercialRegistration,
       'p_tax': taxNumber,
       'p_address': address,
       'p_phone': phone,
       'p_email': email,
+      'p_plan_code': 'default',
     });
     return result as String;
   }
