@@ -517,7 +517,6 @@ class QuotationDocument extends StatelessWidget {
                   Text(quotation.notes),
                 ],
                 const Spacer(),
-                const Text('هذا عرض سعر ولا يخصم من المخزون إلا عند تحويله إلى بيع.', textAlign: TextAlign.center),
                 const SizedBox(height: 8),
                 const Text('تم إنشاؤه بواسطة تطبيق فرشة', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
               ]),
