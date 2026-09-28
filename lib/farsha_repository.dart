@@ -145,6 +145,9 @@ class FarshaRepository {
     });
     return List<Map<String, dynamic>>.from(rows as List);
   }
+  Future<void> acceptDriverConnection(String institutionId) async => client.rpc('accept_driver_connection', params: {'p_institution_id': institutionId});
+  Future<void> endDriverConnection(String institutionId, String driverId) async => client.rpc('end_driver_connection', params: {'p_institution_id': institutionId,'p_driver_id':driverId});
+  Future<List<Map<String,dynamic>>> loadMyDriverConnections() async { final rows=await client.rpc('my_driver_connections'); return List<Map<String,dynamic>>.from(rows as List); }
 
   Future<List<DriverTrip>> loadDriverTrips() async {
     final rows = await client
