@@ -7,7 +7,6 @@ import 'cloud_models.dart';
 import 'documents_page.dart';
 import 'farsha_repository.dart';
 import 'home_pages.dart' show MembersPage;
-import 'materials_page.dart';
 import 'inventory_workspace_page.dart';
 import 'institution_subscription_page.dart';
 import 'operating_reports_page.dart';
