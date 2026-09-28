@@ -537,7 +537,7 @@ class _MembersPageState extends State<MembersPage> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('ربط')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('إرسال دعوة')),
         ],
       ),
     );
@@ -600,7 +600,8 @@ class _MembersPageState extends State<MembersPage> {
                           child: ListTile(
                             leading: const CircleAvatar(child: Icon(Icons.local_shipping_outlined)),
                             title: Text(driver['full_name'] as String),
-                            subtitle: Text('${driver['phone']} • ${driver['is_available'] == true ? 'متاح' : 'غير متاح'}'),
+                            subtitle: Text('${driver['phone']} • ${driver['is_available'] == true ? 'متاح' : 'غير متاح'} • ${driver['connection_status']=='pending'?'بانتظار القبول':driver['connection_status']=='active'?'نشط':'متوقف'}'),
+                            trailing: widget.membership.role==InstitutionRole.owner && driver['connection_status']!='suspended' ? IconButton(tooltip:'إنهاء العلاقة',icon:const Icon(Icons.link_off),onPressed:() async {await widget.repository.endDriverConnection(widget.membership.institutionId,driver['driver_id'] as String);_reload();}) : null,
                           ),
                         )),
                   const SizedBox(height: 18),
