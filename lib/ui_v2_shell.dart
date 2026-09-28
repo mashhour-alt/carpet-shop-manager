@@ -8,6 +8,7 @@ import 'documents_page.dart';
 import 'farsha_repository.dart';
 import 'home_pages.dart' show MembersPage;
 import 'materials_page.dart';
+import 'inventory_workspace_page.dart';
 import 'operating_reports_page.dart';
 import 'operations_pages.dart';
 import 'ui_v2_components.dart';
@@ -389,9 +390,7 @@ class InventoryHubV2 extends StatelessWidget {
   const InventoryHubV2({super.key,required this.membership,required this.repository});
   final InstitutionMembership membership;final FarshaRepository repository;
   @override Widget build(BuildContext context)=>_HubList(title:'المخزون',subtitle:'الموكيت والمستلزمات والتوريدات والتحويلات',children:[
-    _HubItem('مخزون الموكيت والأرضيات','الصنف ← اللون ← الأمتار الطولية',Icons.inventory_2_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('المخزون')),body:InstitutionOperationsPage(membership:membership,repository:repository))))),
-    if(membership.role!=InstitutionRole.seller)_HubItem('المستلزمات','لباد، غراء، حديد ومستلزمات أخرى',Icons.handyman_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('المستلزمات')),body:MaterialsPage(membership:membership,repository:repository))))),
-    if(membership.role!=InstitutionRole.seller)_HubItem('التوريد وتحويل المخزون','من نفس شاشة المخزون مع الحفاظ على منطق الفروع',Icons.swap_horiz_rounded,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('التوريد والتحويل')),body:InstitutionOperationsPage(membership:membership,repository:repository))))),
+    _HubItem('فتح المخزون','الموكيت والمستلزمات في مكان واحد',Icons.inventory_2_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>InventoryWorkspacePage(membership:membership,repository:repository)))),
   ]);
 }
 
