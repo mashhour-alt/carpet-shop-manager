@@ -1,3 +1,5 @@
+-- Outer transaction guarantees fixture cleanup even if an assertion changes.
+begin;
 -- Real production-schema quotation E2E. Every fixture row is rolled back.
 create or replace function pg_temp.farsha_quotation_e2e()
 returns jsonb
@@ -152,3 +154,5 @@ with run as (select pg_temp.farsha_quotation_e2e() result)
 select result as quotation_e2e_result,
   not exists(select 1 from public.institutions where id=(result->>'rollback_marker')::uuid) as rollback_verified
 from run;
+
+rollback;

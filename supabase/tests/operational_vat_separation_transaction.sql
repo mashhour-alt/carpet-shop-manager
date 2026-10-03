@@ -1,3 +1,5 @@
+-- Outer transaction guarantees fixture cleanup even if an assertion changes.
+begin;
 -- Real database E2E for the daily-operations/VAT boundary.
 -- The test uses the production functions and rolls every fixture row back.
 create or replace function pg_temp.farsha_operational_vat_e2e()
@@ -143,3 +145,5 @@ select result as operational_vat_e2e_result,
     where id=(result->>'rollback_marker')::uuid
   ) as rollback_verified
 from run;
+
+rollback;

@@ -1,3 +1,4 @@
+import 'account_live.dart';
 import 'package:flutter/material.dart';
 
 import 'account_statements_page.dart';
@@ -10,7 +11,6 @@ import 'home_pages.dart' show MembersPage;
 import 'inventory_workspace_page.dart';
 import 'institution_subscription_page.dart';
 import 'operating_reports_page.dart';
-import 'operations_pages.dart';
 import 'ui_v2_components.dart';
 
 class FarshaShellV2 extends StatefulWidget {
@@ -44,6 +44,7 @@ class _FarshaShellV2State extends State<FarshaShellV2> {
         MoreHubV2(membership: widget.membership, repository: widget.repository),
       ];
       return Scaffold(
+        appBar: AppBar(toolbarHeight: 44, actions: [AccountNotifications(repository: widget.repository)]),
         body: SafeArea(child: IndexedStack(index: index, children: pages)),
         bottomNavigationBar: NavigationBar(
           selectedIndex: index,
@@ -380,7 +381,7 @@ class SalesHubV2 extends StatelessWidget {
   const SalesHubV2({super.key,required this.membership,required this.repository});
   final InstitutionMembership membership;final FarshaRepository repository;
   @override Widget build(BuildContext context)=>_HubList(title:'البيع',subtitle:'كل دورة البيع في مكان واحد',children:[
-    _HubItem('بيعة جديدة','تسجيل البيع، الإضافات، السائق وSplit Payment',Icons.add_shopping_cart,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('بيعة جديدة')),body:SalesSettlementPage(membership:membership,repository:repository))))),
+    _HubItem('بيعة جديدة','تسجيل البيع، الإضافات، السائق وSplit Payment',Icons.add_shopping_cart,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('بيعة جديدة')),body:AccountStatementsPage(membership:membership,repository:repository))))),
     _HubItem('عروض الأسعار والفواتير','إنشاء وعرض المستندات الحالية',Icons.description_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('المستندات')),body:DocumentsPage(membership:membership,repository:repository))))),
     if(membership.role!=InstitutionRole.seller)_HubItem('سجل المبيعات','بحث وتقارير التشغيل والمبيعات',Icons.history,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('سجل المبيعات')),body:OperatingReportsPage(membership:membership,repository:repository))))),
   ]);
@@ -401,7 +402,7 @@ class AccountsHubV2 extends StatelessWidget {
     final seller=membership.role==InstitutionRole.seller;
     return _HubList(title:seller?'حسابي':'الحسابات',subtitle:seller?'مستحقاتك وحركات حسابك':'كشوف الحساب والتسويات والحركات المالية',children:[
       _HubItem(seller?'كشف حسابي':'كشوف الحساب','البائعون، السائقون والموردون حسب الصلاحية',Icons.account_balance_wallet_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:Text(seller?'حسابي':'كشف الحساب')),body:AccountStatementsPage(membership:membership,repository:repository,personalSeller:seller))))),
-      if(!seller)_HubItem('التسويات والمصروفات','التصفية الشهرية والحركات المالية الحالية',Icons.payments_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('التسويات')),body:SalesSettlementPage(membership:membership,repository:repository))))),
+      if(!seller)_HubItem('التسويات والمصروفات','دفعات، مسحوبات، مصروفات وخصومات',Icons.payments_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('التسويات')),body:AccountStatementsPage(membership:membership,repository:repository))))),
     ]);
   }
 }

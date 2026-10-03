@@ -1,0 +1,52 @@
+-- Every fixture is rolled back; uses the real schema and authenticated RLS role.
+begin;
+do $test$
+declare owner_id uuid; seller_id uuid; iid uuid:=gen_random_uuid(); bid uuid:=gen_random_uuid(); inv uuid:=gen_random_uuid(); sid uuid:=gen_random_uuid(); move uuid:=gen_random_uuid(); sale1 uuid:=gen_random_uuid(); sale2 uuid:=gen_random_uuid(); j jsonb; n int; before_rows jsonb;
+begin
+ select user_id into owner_id from public.institution_memberships where role='owner' and status='active' order by created_at limit 1;
+ select user_id into seller_id from public.institution_memberships where role='seller' and status='active' and user_id<>owner_id order by created_at limit 1;
+ if owner_id is null or seller_id is null then raise exception 'Owner/seller fixture profiles unavailable';end if;
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);
+ insert into public.institutions(id,name,commercial_registration,tax_number,address,phone,email,created_by) values(iid,'Ledger regression','1010000000','310000000000003','Test','0500000000','ledger@example.test',owner_id);
+ insert into public.institution_memberships(institution_id,user_id,role,commission_rate) values(iid,owner_id,'owner',0),(iid,seller_id,'seller',.1);
+ insert into public.branches(id,institution_id,name,code,city,address,phone,is_default,created_by) values(bid,iid,'Test','TEST','Riyadh','Test','0500000000',true,owner_id);
+ insert into public.institution_branch_access(institution_id,branch_id,user_id,can_view,can_sell,can_view_financials,granted_by) values(iid,bid,seller_id,true,true,true,owner_id);
+ insert into public.suppliers(id,institution_id,name,phone) values(sid,iid,'Test supplier','0500000001');
+ insert into public.inventory_items(id,institution_id,branch_id,name,color,remaining_length,width,wholesale_price) values(inv,iid,bid,'Test carpet','Blue',100,4,30);
+ insert into public.sales(id,institution_id,branch_id,inventory_id,seller_id,length,width,area,sale_price_per_sqm,wholesale_price_snapshot,customer_payment,seller_profit,seller_commission,total,created_at) values(sale1,iid,bid,inv,seller_id,1,4,4,1280,30,'cash',5000,500,5120,'2026-01-10');
+ insert into public.seller_ledger(id,institution_id,branch_id,seller_id,kind,amount,created_by,created_at) values(move,iid,bid,seller_id,'payment',100,owner_id,'2026-01-20');
+ perform set_config('role','authenticated',true);
+ j:=public.account_ledger(iid,'seller',seller_id,'2026-02-01','2026-03-01');
+ if (j->>'current_balance')::numeric<>400 or (j->>'opening_balance')::numeric<>400 or jsonb_array_length(j->'movements')<>0 then raise exception 'A carry-forward failed: %',j;end if;
+ select count(*) into n from public.account_notifications where event_id=move and recipient_id=owner_id;
+ if n<>1 then raise exception 'Owner event duplicated/missing';end if;
+ perform set_config('request.jwt.claim.sub',seller_id::text,true);
+ j:=public.account_ledger(iid,'seller',seller_id,'2026-01-01','2026-03-01');
+ if (j->>'current_balance')::numeric<>400 or not exists(select 1 from jsonb_array_elements(j->'movements') x where x->>'movement_id'=move::text and (x->>'amount')::numeric=-100) then raise exception 'C canonical seller movement mismatch';end if;
+ select count(*) into n from public.account_notifications where event_id=move;
+ if n<>1 then raise exception 'D seller notification not exactly once';end if;
+ perform set_config('role','none',true);
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);
+ insert into public.sales(id,institution_id,branch_id,inventory_id,seller_id,length,width,area,sale_price_per_sqm,wholesale_price_snapshot,customer_payment,seller_profit,seller_commission,total,created_at) values(sale2,iid,bid,inv,seller_id,1,4,4,530,30,'cash',2000,200,2120,'2026-02-10');
+ j:=public.account_ledger(iid,'seller',seller_id,'2026-02-01','2026-03-01');
+ if (j->>'current_balance')::numeric<>600 then raise exception 'A 600 failed';end if;
+ insert into public.seller_ledger(institution_id,branch_id,seller_id,kind,amount,created_by,created_at) values(iid,bid,seller_id,'payment',700,owner_id,'2026-02-20');
+ j:=public.account_ledger(iid,'seller',seller_id,'2026-01-01','2026-02-01');
+ if (j->>'current_balance')::numeric<>-100 or (j->>'closing_balance')::numeric<>400 then raise exception 'A current/filter separation failed';end if;
+ select jsonb_agg(to_jsonb(l) order by l.id) into before_rows from public.seller_ledger l where l.institution_id=iid;
+ perform public.close_month(iid,'2026-01-01');
+ perform public.close_month(iid,'2026-01-01');
+ if (select count(*) from public.monthly_closing_snapshots where institution_id=iid)<>1 or before_rows is distinct from (select jsonb_agg(to_jsonb(l) order by l.id) from public.seller_ledger l where l.institution_id=iid) or (select count(*) from public.sales where institution_id=iid)<>2 then raise exception 'F closing changed history';end if;
+ if (select (snapshot->'sellers'->0->>'balance')::numeric from public.monthly_closing_snapshots where institution_id=iid)<>400 then raise exception 'F snapshot is not period-end';end if;
+ -- Separate account for 288 - 400, retaining scenario A history.
+ insert into public.institutions(id,name,commercial_registration,tax_number,address,phone,email,created_by) values(gen_random_uuid(),'Overpayment','1010000000','310000000000003','Test','0500000000','b@example.test',owner_id) returning id into iid;
+ insert into public.institution_memberships(institution_id,user_id,role) values(iid,owner_id,'owner'),(iid,seller_id,'seller');
+ insert into public.branches(institution_id,name,code,city,address,phone,is_default,created_by) values(iid,'B','B','Riyadh','Test','0500000000',true,owner_id) returning id into bid;
+ insert into public.inventory_items(institution_id,branch_id,name,color,remaining_length,width,wholesale_price) values(iid,bid,'B','Blue',100,4,30) returning id into inv;
+ insert into public.sales(institution_id,branch_id,inventory_id,seller_id,length,width,area,sale_price_per_sqm,wholesale_price_snapshot,customer_payment,seller_profit,seller_commission,total) values(iid,bid,inv,seller_id,1,4,4,750,30,'cash',2880,288,3000);
+ insert into public.seller_ledger(institution_id,seller_id,kind,amount,created_by) values(iid,seller_id,'payment',400,owner_id);
+ j:=public.account_ledger(iid,'seller',seller_id,'1900-01-01','2100-01-01');
+ if (j->>'current_balance')::numeric<>-112 then raise exception 'B 288-400 failed';end if;
+ raise notice 'PASS A carry-forward 400/600/-100; B -112; C canonical ID; D recipient uniqueness; F immutable closing';
+end $test$;
+rollback;

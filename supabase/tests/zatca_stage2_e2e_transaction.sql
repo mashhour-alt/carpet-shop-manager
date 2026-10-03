@@ -1,3 +1,5 @@
+-- Outer transaction guarantees fixture cleanup even if an assertion changes.
+begin;
 -- Stage 2 integration proof. The inner PL/pgSQL block is a subtransaction.
 -- Its deliberate exception rolls back every test row while preserving the
 -- materialized JSON result in memory for verification by the XML generator.
@@ -224,3 +226,5 @@ select result as stage2_e2e_result,
          where id=(result->>'rollback_marker')::uuid
        ) as rollback_verified
 from run;
+
+rollback;

@@ -1,3 +1,4 @@
+import 'account_live.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -644,7 +645,9 @@ class DriverHome extends StatefulWidget {
   @override State<DriverHome> createState() => _DriverHomeState();
 }
 
-class _DriverHomeState extends State<DriverHome> {
+class _DriverHomeState extends State<DriverHome> with WidgetsBindingObserver, AccountLive<DriverHome> {
+ @override void initState(){super.initState();startAccountLive(widget.repository,_reload);}
+
   late Future<List<DriverTrip>> _trips = widget.repository.loadDriverTrips();
   late Future<List<Map<String,dynamic>>> _connections = widget.repository.loadMyDriverConnections();
 
@@ -652,6 +655,7 @@ class _DriverHomeState extends State<DriverHome> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(actions:[AccountNotifications(repository:widget.repository)]),
     body: SafeArea(
       child: FutureBuilder<List<DriverTrip>>(
         future: _trips,
@@ -672,9 +676,14 @@ class _DriverHomeState extends State<DriverHome> {
               DashboardHeader(name: widget.profile.fullName, institution: 'فرشة', subtitle: 'السائق'),
               const SizedBox(height: 16),
               FutureBuilder<List<Map<String,dynamic>>>(future:_connections,builder:(context,cs){
-                if(!cs.hasData)return const SizedBox.shrink(); final pending=cs.data!.where((x)=>x['status']=='pending').toList();
-                if(pending.isEmpty)return const SizedBox.shrink();
-                return Card(child:Column(children:[for(final c in pending)ListTile(
+                if(!cs.hasData)return const SizedBox.shrink(); final pending=cs.data!.where((x)=>x['status']=='pending').toList(),active=cs.data!.where((x)=>x['status']=='active').toList();
+                if(pending.isEmpty&&active.isEmpty)return const SizedBox.shrink();
+                return Card(child:Column(children:[for(final c in active)ListTile(
+ title:Text('كشف حساب • ${c['institution_name']}'),leading:const Icon(Icons.account_balance_wallet),
+ onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>StatementDetailPage(
+ membership:InstitutionMembership(institutionId:c['institution_id'] as String,institutionName:c['institution_name'] as String,role:InstitutionRole.seller,status:'active'),
+ repository:widget.repository,party:'driver',partyId:widget.repository.userId,partyName:c['institution_name'] as String,from:DateTime(1900),to:DateTime(DateTime.now().year+1),allowEntry:false)))),
+ for(final c in pending)ListTile(
                   leading:const Icon(Icons.storefront_outlined),title:Text(c['institution_name'] as String),subtitle:const Text('دعوة للعمل مع المؤسسة'),
                   trailing:FilledButton(onPressed:() async {await widget.repository.acceptDriverConnection(c['institution_id'] as String);_reload();},child:const Text('قبول')),
                 )]));
@@ -695,11 +704,11 @@ class _DriverHomeState extends State<DriverHome> {
               else
                 Card(child: ListTile(contentPadding: const EdgeInsets.all(14), leading: const CircleAvatar(backgroundColor: Color(0xffE9F4EE), child: Icon(Icons.route, color: positiveGreen)), title: Text(next.institutionName, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('البائع: ${next.sellerName}\n${next.date.toLocal().toString().substring(0,10)}'), trailing: Text(farshaMoney(next.amount), style: const TextStyle(fontWeight: FontWeight.w800)))),
               const SizedBox(height: 20),
-              const SectionTitle('حسابي هذا الشهر'),
+              const SectionTitle('إحصائيات المشاوير هذا الشهر'),
               KpiGrid(children: [
                 KpiCard(title:'إجمالي المستحق',value:farshaMoney(total),icon:Icons.account_balance_wallet_outlined,accent:infoBlue),
                 KpiCard(title:'المدفوع',value:farshaMoney(paid),icon:Icons.check_circle_outline,accent:positiveGreen),
-                KpiCard(title:'المتبقي',value:farshaMoney(total-paid),icon:Icons.schedule,accent:warningOrange),
+                KpiCard(title:'مشاوير غير مدفوعة',value:farshaMoney(total-paid),icon:Icons.schedule,accent:warningOrange),
                 KpiCard(title:'عدد المشاوير',value:month.length.toString(),icon:Icons.route_outlined,accent:partnerPurple),
               ]),
               const SizedBox(height: 20),

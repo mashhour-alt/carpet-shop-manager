@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cloud_models.dart';
@@ -6,6 +7,47 @@ class FarshaRepository {
   FarshaRepository(this.client);
 
   final SupabaseClient client;
+
+  RealtimeChannel? _accountChannel;
+  late final StreamController<void> _accountEvents = StreamController<void>.broadcast(
+    onListen: _startAccountEvents,
+    onCancel: _stopAccountEvents,
+  );
+  Stream<void> get accountChanges => _accountEvents.stream;
+  void _startAccountEvents() {
+    if (_accountChannel != null) return;
+    _accountChannel = client.channel('account-events-$userId')
+      .onPostgresChanges(event: PostgresChangeEvent.insert, schema: 'public',
+        table: 'account_notifications',
+        filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'recipient_id', value: userId),
+        callback: (_) => _accountEvents.add(null))
+      .subscribe((status, error) {
+        // Reconcile after first connection and reconnect, including missed events.
+        if (status == RealtimeSubscribeStatus.subscribed) _accountEvents.add(null);
+      });
+  }
+  void _stopAccountEvents() {
+    final channel = _accountChannel;
+    _accountChannel = null;
+    if (channel != null) unawaited(client.removeChannel(channel));
+  }
+  Future<List<Map<String,dynamic>>> loadAccountNotifications() async {
+    final rows = await client.from('account_notifications').select()
+      .eq('recipient_id', userId).order('created_at', ascending: false).limit(100);
+    return List<Map<String,dynamic>>.from(rows);
+  }
+  Future<void> markAccountNotificationRead(String id) async {
+    await client.from('account_notifications').update({'read_at': DateTime.now().toUtc().toIso8601String()})
+      .eq('id', id).eq('recipient_id', userId);
+  }
+  Future<Map<String,dynamic>> loadAccountLedger(String institutionId, String party,
+      String partyId, DateTime from, DateTime to) async {
+    final result = await client.rpc('account_ledger', params: {
+      'p_institution_id': institutionId, 'p_party': party, 'p_party_id': partyId,
+      'p_from': from.toUtc().toIso8601String(), 'p_to': to.toUtc().toIso8601String(),
+    });
+    return Map<String,dynamic>.from(result as Map);
+  }
 
   String get userId => client.auth.currentUser!.id;
 
@@ -256,8 +298,8 @@ class FarshaRepository {
     return SettlementSummary(salary: salary, commission: plan == 'salary' ? 0 : commission, withdrawals: totals['withdrawal'] ?? 0, expenses: totals['expense'] ?? 0, deductions: totals['deduction'] ?? 0, payments: totals['payment'] ?? 0);
   }
 
-  Future<void> addSellerLedger({required String institutionId, required String sellerId, required String kind, required double amount, String note = ''}) async {
-    await client.from('seller_ledger').insert({'institution_id': institutionId, 'seller_id': sellerId, 'kind': kind, 'amount': amount, 'note': note, 'created_by': userId});
+  Future<void> addSellerLedger({required String institutionId, required String sellerId, required String kind, required double amount, String note = '', String reference = '', String? branchId}) async {
+    await client.from('seller_ledger').insert({'institution_id': institutionId, 'branch_id': branchId, 'seller_id': sellerId, 'kind': kind, 'amount': amount, 'note': note, 'reference': reference, 'created_by': userId});
   }
 
   Future<InstitutionSettings> loadInstitutionSettings(String institutionId) async {

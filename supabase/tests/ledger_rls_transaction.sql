@@ -1,0 +1,56 @@
+begin;
+do $test$
+declare owner_a uuid:=gen_random_uuid();owner_b uuid:=gen_random_uuid();seller_a uuid:=gen_random_uuid();seller_b uuid:=gen_random_uuid();accountant uuid:=gen_random_uuid();driver uuid:=gen_random_uuid();a uuid:=gen_random_uuid();b uuid:=gen_random_uuid();a1 uuid:=gen_random_uuid();a2 uuid:=gen_random_uuid();b1 uuid:=gen_random_uuid();mid uuid:=gen_random_uuid(); inv uuid:=gen_random_uuid(); sale uuid:=gen_random_uuid();j jsonb;n int;denied boolean;u uuid;
+begin
+ foreach u in array array[owner_a,owner_b,seller_a,seller_b,accountant] loop
+ insert into auth.users(id,raw_user_meta_data) values(u,jsonb_build_object('full_name','Ledger test','account_kind','institution','onboarding_mode','staff'));end loop;
+ insert into auth.users(id,raw_user_meta_data) values(driver,'{"full_name":"Test driver","account_kind":"driver"}');
+ insert into public.institutions(id,name,commercial_registration,tax_number,address,phone,email,created_by) values(a,'RLS A','1','310000000000003','Test','0','a@example.test',owner_a),(b,'RLS B','2','310000000000003','Test','0','b@example.test',owner_b);
+ insert into public.institution_memberships(institution_id,user_id,role) values(a,owner_a,'owner'),(b,owner_b,'owner'),(a,seller_a,'seller'),(a,seller_b,'seller'),(b,seller_b,'seller'),(a,accountant,'accountant');
+ insert into public.branches(id,institution_id,name,code,city,address,phone,is_default,created_by) values(a1,a,'A1','A1','Riyadh','Test','0',true,owner_a),(a2,a,'A2','A2','Riyadh','Test','0',false,owner_a),(b1,b,'B1','B1','Riyadh','Test','0',true,owner_b);
+ insert into public.institution_branch_access(institution_id,branch_id,user_id,can_view,can_view_financials,can_manage_financials,granted_by) values(a,a1,accountant,true,true,true,owner_a),(a,a1,seller_a,true,true,false,owner_a),(a,a2,seller_a,true,true,false,owner_a),(a,a1,seller_b,true,true,false,owner_a),(b,b1,seller_b,true,true,false,owner_b);
+ insert into public.institution_driver_connections(institution_id,driver_id,status,connected_by) values(a,driver,'active',owner_a),(b,driver,'active',owner_b);
+ insert into public.seller_ledger(id,institution_id,branch_id,seller_id,kind,amount,created_by) values(mid,a,a1,seller_a,'payment',100,owner_a);
+ insert into public.seller_ledger(institution_id,branch_id,seller_id,kind,amount,created_by) values(a,a2,seller_a,'payment',200,owner_a),(a,a1,seller_b,'payment',90,owner_a),(b,b1,seller_b,'payment',80,owner_b);
+ insert into public.driver_account_entries(institution_id,branch_id,driver_id,entry_type,balance_effect,created_by) values(a,a1,driver,'payment',-25,owner_a),(b,b1,driver,'payment',-40,owner_b);
+ insert into public.inventory_items(id,institution_id,branch_id,name,color,remaining_length,width,wholesale_price) values(inv,a,a1,'Test','Blue',100,4,30);
+ insert into public.sales(id,institution_id,branch_id,inventory_id,seller_id,length,width,area,sale_price_per_sqm,wholesale_price_snapshot,customer_payment,seller_profit,seller_commission,total) values(sale,a,a1,inv,seller_a,1,4,4,80,30,'cash',200,20,320);
+ if (select count(*) from public.account_notifications where event_id=sale and recipient_id in(owner_a,accountant))<>2 then raise exception 'Authorized owner/accountant sale notification missing';end if;
+ -- Repeat an unchanged successful sale update: no duplicate completion events.
+ update public.sales set status=status where id=sale;
+ if (select count(*) from public.account_notifications where event_id=sale and recipient_id=accountant)<>1 then raise exception 'Duplicate sale notification';end if;
+ perform set_config('role','authenticated',true);
+ perform set_config('request.jwt.claim.sub',owner_a::text,true);
+ if exists(select 1 from public.seller_ledger where institution_id=b) or exists(select 1 from public.account_notifications where institution_id=b) then raise exception 'Institution isolation failed';end if;
+ denied:=false;begin perform public.account_ledger(b,'seller',seller_b,'1900-01-01','2100-01-01');exception when others then denied:=true;end;
+ if not denied then raise exception 'Cross institution RPC leaked';end if;
+ perform set_config('request.jwt.claim.sub',seller_a::text,true);
+ if exists(select 1 from public.seller_ledger where seller_id<>seller_a) or exists(select 1 from public.account_notifications where recipient_id<>seller_a) then raise exception 'Seller private data leaked';end if;
+ denied:=false;begin perform public.account_ledger(a,'seller',seller_b,'1900-01-01','2100-01-01');exception when others then denied:=true;end;
+ if not denied then raise exception 'Other seller RPC leaked';end if;
+ denied:=false;begin insert into public.seller_ledger(institution_id,seller_id,kind,amount,created_by) values(a,seller_a,'payment',1,seller_a);exception when others then denied:=true;end;
+ if not denied then raise exception 'Seller unauthorized financial write';end if;
+ perform set_config('request.jwt.claim.sub',accountant::text,true);
+ if exists(select 1 from public.seller_ledger where branch_id=a2) then raise exception 'Accountant branch leakage';end if;
+ j:=public.account_ledger(a,'seller',seller_a,'1900-01-01','2100-01-01');
+ if (j->>'current_balance')::numeric<>-80 then raise exception 'Accountant RPC branch scope failed: %',j;end if;
+ if exists(select 1 from public.account_notifications where recipient_id<>accountant or branch_id=a2) then raise exception 'Accountant notifications leaked';end if;
+ denied:=false;begin update public.seller_ledger set amount=1 where id=mid;exception when others then denied:=true;end;
+ if not denied then raise exception 'Historical financial update permitted';end if;
+ perform set_config('request.jwt.claim.sub',driver::text,true);
+ j:=public.account_ledger(a,'driver',driver,'1900-01-01','2100-01-01');if (j->>'current_balance')::numeric<>-25 then raise exception 'Driver A balance';end if;
+ j:=public.account_ledger(b,'driver',driver,'1900-01-01','2100-01-01');if (j->>'current_balance')::numeric<>-40 then raise exception 'Driver B balance';end if;
+ perform set_config('role','none',true);
+ update public.institution_driver_connections set status='suspended' where institution_id=a and driver_id=driver;
+ perform set_config('role','authenticated',true);
+ if exists(select 1 from public.driver_account_entries where institution_id=a) or exists(select 1 from public.account_notifications where institution_id=a) then raise exception 'Suspended driver read leak';end if;
+ denied:=false;begin perform public.account_ledger(a,'driver',driver,'1900-01-01','2100-01-01');exception when others then denied:=true;end;
+ if not denied then raise exception 'Suspended driver RPC allowed';end if;
+ j:=public.account_ledger(b,'driver',driver,'1900-01-01','2100-01-01');if (j->>'current_balance')::numeric<>-40 then raise exception 'Suspending A affected B';end if;
+ perform set_config('request.jwt.claim.sub',owner_a::text,true);
+ if exists(select 1 from public.list_connected_drivers(a) d where to_jsonb(d) ? 'iban' or to_jsonb(d) ? 'bank_name') then raise exception 'Directory banking data leaked';end if;
+ perform set_config('role','none',true);
+ if not exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='account_notifications') then raise exception 'Notification publication missing';end if;
+ raise notice 'PASS institution/seller/accountant branch/driver relationship/notification RLS; write and banking isolation';
+end $test$;
+rollback;
