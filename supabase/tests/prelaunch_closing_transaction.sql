@@ -1,7 +1,7 @@
 -- E2E release-candidate regression. Every fixture row is rolled back.
 begin;
 do $$
-declare owner_id uuid; seller_id uuid; iid uuid:=gen_random_uuid(); bid uuid:=gen_random_uuid(); sid uuid:=gen_random_uuid(); inv uuid:=gen_random_uuid(); addon uuid:=gen_random_uuid(); sale uuid; report jsonb; balance numeric;
+declare owner_id uuid; seller_id uuid; iid uuid:=gen_random_uuid(); bid uuid:=gen_random_uuid(); sid uuid:=gen_random_uuid(); inv uuid:=gen_random_uuid(); addon uuid:=gen_random_uuid(); sale uuid; report jsonb; test_balance numeric;
 begin
   select user_id into owner_id from public.institution_memberships where role='owner' and status='active' order by created_at limit 1;
   select user_id into seller_id from public.institution_memberships where role='seller' and status='active' and user_id<>owner_id order by created_at limit 1;
@@ -20,8 +20,8 @@ begin
   perform public.void_sale(sale,'RC cancellation');
   if (select stock_quantity from public.addon_types where id=addon)<>10 or (select count(*) from public.addon_movements where sale_id=sale and movement_type='sale_void')<>1 then raise exception 'material cancellation did not reverse exactly once'; end if;
   insert into public.seller_ledger(institution_id,branch_id,seller_id,kind,amount,note,created_by) values(iid,bid,seller_id,'withdrawal',20,'RC payment',owner_id);
-  select balance into balance from public.account_summaries(iid,'seller',date_trunc('month',now()),date_trunc('month',now())+interval '1 month') where party_id=seller_id;
-  if balance<>-20 then raise exception 'cumulative balance is not showing overpayment: %',balance; end if;
+  select account.balance into test_balance from public.account_summaries(iid,'seller',date_trunc('month',now()),date_trunc('month',now())+interval '1 month') account where account.party_id=seller_id;
+  if test_balance<>-20 then raise exception 'cumulative balance is not showing overpayment: %',test_balance; end if;
   report:=public.monthly_owner_report(iid,date_trunc('month',current_date)::date);
   if report is null then raise exception 'monthly report missing'; end if;
   perform public.close_month(iid,date_trunc('month',current_date)::date);
