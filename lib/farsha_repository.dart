@@ -448,6 +448,15 @@ class FarshaRepository {
     await client.rpc('void_sale',params:{'p_sale_id':saleId,'p_reason':reason.trim()});
   }
 
+  Future<Map<String,dynamic>> loadMonthlyOwnerReport(String institutionId,DateTime month) async {
+    final value=await client.rpc('monthly_owner_report',params:{'p_institution_id':institutionId,'p_month_start':DateTime(month.year,month.month,1).toIso8601String().split('T').first});
+    return Map<String,dynamic>.from(value as Map);
+  }
+
+  Future<void> closeMonth(String institutionId,DateTime month) async {
+    await client.rpc('close_month',params:{'p_institution_id':institutionId,'p_month_start':DateTime(month.year,month.month,1).toIso8601String().split('T').first});
+  }
+
   Future<SellerPerformanceRecord> loadSellerPerformance(String institutionId,String sellerId,DateTime from,DateTime to) async {
     final rows=await client.rpc('seller_performance',params:{'p_institution_id':institutionId,'p_seller_id':sellerId,'p_from':from.toIso8601String(),'p_to':to.toIso8601String()});
     return SellerPerformanceRecord.fromMap((rows as List).first as Map<String,dynamic>);
