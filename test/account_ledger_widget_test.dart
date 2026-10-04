@@ -37,6 +37,14 @@ void main() {
     expect(repo.events.hasListener,isFalse);
     await repo.events.close();
   });
+  testWidgets('More shows logout as its last account action', (tester) async {
+    final repo=TestLedgerRepository();
+    await tester.pumpWidget(MaterialApp(home:Scaffold(body:MoreHubV2(membership:member,repository:repo))));
+    expect(find.text('تسجيل الخروج'),findsOneWidget);
+    expect(find.text('الخروج من الحساب على هذا الجهاز'),findsOneWidget);
+    await tester.pumpWidget(const SizedBox());await repo.events.close();
+  });
+
   testWidgets('Accounts financial entry opens accounts and never the sales form', (tester) async {
     final repo=TestLedgerRepository();
     await tester.pumpWidget(MaterialApp(home:Scaffold(body:AccountsHubV2(membership:member,repository:repo))));

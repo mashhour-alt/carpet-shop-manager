@@ -1,5 +1,6 @@
 import 'account_live.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'account_statements_page.dart';
 import 'branch_report_page.dart';
@@ -419,7 +420,18 @@ class MoreHubV2 extends StatelessWidget {
       if(manager)_HubItem('التقارير','تقارير التشغيل والتصدير',Icons.analytics_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('التقارير')),body:OperatingReportsPage(membership:membership,repository:repository))))),
       if(manager)_HubItem('تقرير الفروع','مبيعات وربح ومصروفات كل فرع',Icons.store_mall_directory_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('تقرير الفروع')),body:BranchReportPage(membership:membership,repository:repository))))),
       _HubItem('المستندات','الفواتير وعروض الأسعار',Icons.receipt_long_outlined,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('المستندات')),body:DocumentsPage(membership:membership,repository:repository))))),
+      _HubItem('تسجيل الخروج','الخروج من الحساب على هذا الجهاز',Icons.logout,()=>_signOut(context)),
     ]);
+
+  Future<void> _signOut(BuildContext context) async {
+    try {
+      await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
+    } on AuthException catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
   }
 }
 
