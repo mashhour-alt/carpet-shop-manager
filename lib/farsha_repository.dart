@@ -192,6 +192,13 @@ class FarshaRepository {
   Future<List<Map<String,dynamic>>> loadMyDriverConnections() async { final rows=await client.rpc('my_driver_connections'); return List<Map<String,dynamic>>.from(rows as List); }
 
   Future<List<DriverTrip>> loadDriverTrips() async {
+    final results = await Future.wait([_loadInstitutionDriverTrips(), _loadPersonalDriverTrips()]);
+    final trips = [...results[0], ...results[1]];
+    trips.sort((a, b) => b.date.compareTo(a.date));
+    return trips;
+  }
+
+  Future<List<DriverTrip>> _loadInstitutionDriverTrips() async {
     final rows = await client
         .from('driver_trips')
         .select('id,trip_date,amount,payment_status,payment_method,institutions(name),profiles!driver_trips_seller_id_fkey(full_name)')
@@ -201,6 +208,54 @@ class FarshaRepository {
         .map((row) => DriverTrip.fromMap(row as Map<String, dynamic>))
         .toList();
   }
+
+  Future<List<DriverTrip>> _loadPersonalDriverTrips() async {
+    final rows = await client
+        .from('driver_personal_trips')
+        .select('id,shop_name,customer_name,customer_phone,location,trip_at,amount,payment_status,payment_method,notes')
+        .eq('driver_id', userId)
+        .order('trip_at', ascending: false);
+    return (rows as List)
+        .map((row) => DriverTrip.personalFromMap(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> savePersonalDriverTrip({
+    String? id,
+    required String shopName,
+    required double amount,
+    String customerName = '',
+    String customerPhone = '',
+    String location = '',
+    required DateTime tripAt,
+    String notes = '',
+  }) async {
+    final values = {
+      'driver_id': userId,
+      'shop_name': shopName.trim(),
+      'amount': amount,
+      'customer_name': customerName.trim(),
+      'customer_phone': customerPhone.trim(),
+      'location': location.trim(),
+      'trip_at': tripAt.toUtc().toIso8601String(),
+      'notes': notes.trim(),
+    };
+    if (id == null) {
+      await client.from('driver_personal_trips').insert(values);
+    } else {
+      await client.from('driver_personal_trips').update({...values, 'updated_at': DateTime.now().toUtc().toIso8601String()}).eq('id', id).eq('driver_id', userId);
+    }
+  }
+
+  Future<void> setPersonalDriverTripPaid(String tripId, bool paid) => client
+      .from('driver_personal_trips')
+      .update({
+        'payment_status': paid ? 'paid' : 'unpaid',
+        'payment_method': paid ? 'cash' : null,
+        'paid_at': paid ? DateTime.now().toUtc().toIso8601String() : null,
+      })
+      .eq('id', tripId)
+      .eq('driver_id', userId);
 
   Future<List<SupplierRecord>> loadSuppliers(String institutionId) async {
     final rows = await client.from('suppliers').select().eq('institution_id', institutionId).order('name');

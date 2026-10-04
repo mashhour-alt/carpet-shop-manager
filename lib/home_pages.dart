@@ -653,9 +653,106 @@ class _DriverHomeState extends State<DriverHome> with WidgetsBindingObserver, Ac
 
   void _reload() => setState(() { _trips = widget.repository.loadDriverTrips(); _connections = widget.repository.loadMyDriverConnections(); });
 
+  Future<void> _editPersonalTrip([DriverTrip? trip]) async {
+    final formKey = GlobalKey<FormState>();
+    final shop = TextEditingController(text: trip?.institutionName ?? '');
+    final amount = TextEditingController(text: trip == null ? '' : trip.amount.toStringAsFixed(2));
+    final customer = TextEditingController(text: trip?.customerName ?? '');
+    final phone = TextEditingController(text: trip?.customerPhone ?? '');
+    final location = TextEditingController(text: trip?.location ?? '');
+    final notes = TextEditingController(text: trip?.notes ?? '');
+    var tripAt = trip?.date ?? DateTime.now();
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> chooseDateTime() async {
+            final date = await showDatePicker(
+              context: context,
+              initialDate: tripAt,
+              firstDate: DateTime(2020),
+              lastDate: DateTime(2100),
+            );
+            if (date == null || !context.mounted) return;
+            final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(tripAt));
+            if (time != null) setDialogState(() => tripAt = DateTime(date.year, date.month, date.day, time.hour, time.minute));
+          }
+
+          final dateText = '${tripAt.year.toString().padLeft(4, '0')}-${tripAt.month.toString().padLeft(2, '0')}-${tripAt.day.toString().padLeft(2, '0')} ${TimeOfDay.fromDateTime(tripAt).format(context)}';
+          return AlertDialog(
+            title: Text(trip == null ? 'إضافة مشوار شخصي' : 'تعديل المشوار الشخصي'),
+            content: SizedBox(
+              width: 420,
+              child: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    TextFormField(controller: shop, decoration: const InputDecoration(labelText: 'اسم المحل / المؤسسة *'), validator: (value) => value == null || value.trim().isEmpty ? 'اكتب اسم المحل أو المؤسسة' : null),
+                    const SizedBox(height: 10),
+                    TextFormField(controller: amount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'قيمة المشوار *'), validator: (value) => (double.tryParse(value ?? '') ?? 0) <= 0 ? 'اكتب قيمة صحيحة' : null),
+                    const SizedBox(height: 10),
+                    TextField(controller: customer, decoration: const InputDecoration(labelText: 'اسم العميل (اختياري)')),
+                    const SizedBox(height: 10),
+                    TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم العميل (اختياري)')),
+                    const SizedBox(height: 10),
+                    TextField(controller: location, decoration: const InputDecoration(labelText: 'الموقع (اختياري)')),
+                    const SizedBox(height: 10),
+                    ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.schedule), title: const Text('التاريخ والوقت'), subtitle: Text(dateText), onTap: chooseDateTime),
+                    TextField(controller: notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات (اختياري)')),
+                  ]),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+              FilledButton(onPressed: () { if (formKey.currentState!.validate()) Navigator.pop(dialogContext, true); }, child: const Text('حفظ')),
+            ],
+          );
+        },
+      ),
+    );
+    if (saved == true) {
+      try {
+        await widget.repository.savePersonalDriverTrip(
+          id: trip?.id,
+          shopName: shop.text,
+          amount: double.parse(amount.text),
+          customerName: customer.text,
+          customerPhone: phone.text,
+          location: location.text,
+          tripAt: tripAt,
+          notes: notes.text,
+        );
+        _reload();
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ المشوار الشخصي')));
+      } catch (error) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ المشوار: $error'), backgroundColor: Theme.of(context).colorScheme.error));
+      }
+    }
+    for (final controller in [shop, amount, customer, phone, location, notes]) { controller.dispose(); }
+  }
+
+  Future<void> _togglePersonalTripPayment(DriverTrip trip) async {
+    try {
+      await widget.repository.setPersonalDriverTripPaid(trip.id, trip.paymentStatus != 'paid');
+      _reload();
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحديث حالة الدفع: $error'), backgroundColor: Theme.of(context).colorScheme.error));
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(actions:[AccountNotifications(repository:widget.repository)]),
+    appBar: AppBar(title: const Text('لوحة السائق'), actions:[
+      AccountNotifications(repository:widget.repository),
+      PopupMenuButton<String>(
+        tooltip: 'الحساب والإعدادات',
+        onSelected: (value) { if (value == 'logout') Supabase.instance.client.auth.signOut(); },
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: 'logout', child: ListTile(leading: Icon(Icons.logout), title: Text('تسجيل الخروج'))),
+        ],
+      ),
+    ]),
     body: SafeArea(
       child: FutureBuilder<List<DriverTrip>>(
         future: _trips,
@@ -697,6 +794,8 @@ class _DriverHomeState extends State<DriverHome> with WidgetsBindingObserver, Ac
                   Text('$delivered تم • ${today.length-delivered} متبقي', style: TextStyle(color: Colors.grey.shade700)),
                 ])),
               ]))),
+              const SizedBox(height: 14),
+              SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () => _editPersonalTrip(), icon: const Icon(Icons.add), label: const Text('+ إضافة مشوار'))),
               const SizedBox(height: 20),
               const SectionTitle('المشوار القادم'),
               if (next == null)
@@ -713,7 +812,23 @@ class _DriverHomeState extends State<DriverHome> with WidgetsBindingObserver, Ac
               ]),
               const SizedBox(height: 20),
               const SectionTitle('سجل المشاوير'),
-              if (trips.isEmpty) const EmptyState(title:'لا توجد مشاوير مسجلة حتى الآن',icon:Icons.route_outlined) else ...trips.take(20).map((trip)=>ListTile(contentPadding:EdgeInsets.zero,leading:Icon(trip.paymentStatus=='paid'?Icons.check_circle:Icons.route,color:trip.paymentStatus=='paid'?positiveGreen:null),title:Text(trip.institutionName),subtitle:Text('${trip.sellerName} • ${trip.date.toLocal().toString().substring(0,10)}'),trailing:Text(farshaMoney(trip.amount),style:const TextStyle(fontWeight:FontWeight.w800)))),
+              if (trips.isEmpty) const EmptyState(title:'لا توجد مشاوير مسجلة حتى الآن',icon:Icons.route_outlined) else ...trips.take(20).map((trip)=>ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(trip.paymentStatus=='paid'?Icons.check_circle:Icons.route,color:trip.paymentStatus=='paid'?positiveGreen:null),
+                title: Text(trip.institutionName),
+                subtitle: Text('${trip.isPersonal ? 'مشوار شخصي${trip.customerName.isEmpty ? '' : ' • ${trip.customerName}'}' : trip.sellerName} • ${trip.date.toLocal().toString().substring(0,10)}'),
+                onTap: trip.isPersonal ? () => _editPersonalTrip(trip) : null,
+                trailing: trip.isPersonal
+                    ? PopupMenuButton<String>(
+                        onSelected: (value) { if (value == 'edit') _editPersonalTrip(trip); else _togglePersonalTripPayment(trip); },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(value: 'edit', child: Text('تعديل')),
+                          PopupMenuItem(value: 'payment', child: Text(trip.paymentStatus == 'paid' ? 'تحديد كغير مدفوع' : 'تحديد كمدفوع')),
+                        ],
+                        child: Text(farshaMoney(trip.amount), style: const TextStyle(fontWeight: FontWeight.w800)),
+                      )
+                    : Text(farshaMoney(trip.amount),style:const TextStyle(fontWeight:FontWeight.w800)),
+              )),
             ]),
           );
         },

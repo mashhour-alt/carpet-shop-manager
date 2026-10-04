@@ -161,6 +161,10 @@ jobs:
           grep -q 'EGS issuance is already pending' "$RUNNER_TEMP/issuer-b.log"
           test "$(psql "$DB" -Atc "select count(*) from public.zatca_issuance_reservations where egs_id='00000000-0000-4000-8000-000000000006' and icv=1")" = "1"
           psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/zatca_stage3_atomic_isolated.sql
+      - name: Personal driver trip RLS validation
+        env:
+          PGPASSWORD: postgres
+        run: psql "postgresql://postgres@127.0.0.1:5432/postgres" -v ON_ERROR_STOP=1 -f supabase/tests/driver_personal_trips_rls_transaction.sql
       - name: Static analysis and tests
         run: |
           flutter analyze --no-fatal-infos

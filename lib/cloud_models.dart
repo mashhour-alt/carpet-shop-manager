@@ -72,6 +72,11 @@ class DriverTrip {
     required this.amount,
     required this.paymentStatus,
     required this.paymentMethod,
+    this.isPersonal = false,
+    this.customerName = '',
+    this.customerPhone = '',
+    this.location = '',
+    this.notes = '',
   });
 
   final String id;
@@ -81,6 +86,11 @@ class DriverTrip {
   final double amount;
   final String paymentStatus;
   final String? paymentMethod;
+  final bool isPersonal;
+  final String customerName;
+  final String customerPhone;
+  final String location;
+  final String notes;
 
   factory DriverTrip.fromMap(Map<String, dynamic> map) {
     final institution = map['institutions'] as Map<String, dynamic>?;
@@ -95,6 +105,21 @@ class DriverTrip {
       paymentMethod: map['payment_method'] as String?,
     );
   }
+
+  factory DriverTrip.personalFromMap(Map<String, dynamic> map) => DriverTrip(
+        id: map['id'] as String,
+        institutionName: map['shop_name'] as String,
+        sellerName: 'مشوار شخصي',
+        date: DateTime.parse(map['trip_at'] as String),
+        amount: (map['amount'] as num).toDouble(),
+        paymentStatus: map['payment_status'] as String,
+        paymentMethod: map['payment_method'] as String?,
+        isPersonal: true,
+        customerName: map['customer_name'] as String? ?? '',
+        customerPhone: map['customer_phone'] as String? ?? '',
+        location: map['location'] as String? ?? '',
+        notes: map['notes'] as String? ?? '',
+      );
 }
 
 class SupplierRecord {
