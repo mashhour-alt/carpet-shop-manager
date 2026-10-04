@@ -277,7 +277,60 @@ class _AccountantDashboardV2State extends State<AccountantDashboardV2> {
       widget.repository.loadExpenses(widget.membership.institutionId, r.from, r.to, branchId: branchId),
       widget.repository.loadAccessibleBranches(widget.membership.institutionId),
     ]);
-    return (x[0] as OperatingSummary, x[1] as List<OperatingSaleRecord>, x[2] as List<Map<String,dynamic>>, x[3] as List<…1669 tokens truncated…المباعة',value:'${p.totalLength.toStringAsFixed(1)} م',icon:Icons.straighten,accent:positiveGreen),
+    return (x[0] as OperatingSummary, x[1] as List<OperatingSaleRecord>, x[2] as List<Map<String,dynamic>>, x[3] as List<BranchRecord>);
+  }
+  void reload() => setState(() => data = load());
+  Future<void> change(DashboardPeriod p) async {
+    if (p == DashboardPeriod.custom) {
+      final now=DateTime.now(); final x=await showDateRangePicker(context: context, firstDate: DateTime(now.year-4), lastDate: DateTime(now.year+1));
+      if(x==null)return; custom=x;
+    }
+    period=p; reload();
+  }
+  @override Widget build(BuildContext context) => FutureBuilder<(OperatingSummary,List<OperatingSaleRecord>,List<Map<String,dynamic>>,List<BranchRecord>)>(future:data,builder:(context,s){
+    if(!s.hasData)return const _DashboardSkeleton();
+    final summary=s.data!.$1,sales=s.data!.$2,expenses=s.data!.$3,branches=s.data!.$4;
+    final outflow=expenses.fold<double>(0,(a,b)=>a+(b['amount'] as num).toDouble());
+    final inflow=summary.payments.values.fold<double>(0,(a,b)=>a+b);
+    final due=(summary.salesAmount-inflow).clamp(0.0,double.infinity).toDouble();
+    return RefreshIndicator(onRefresh:()async=>reload(),child:ListView(padding:const EdgeInsets.fromLTRB(16,14,16,24),children:[
+      DashboardHeader(name:widget.profile.fullName,institution:widget.membership.institutionName,subtitle:'المحاسب',branches:branches,selectedBranchId:branchId,onBranchChanged:branches.length>1?(v){branchId=v;reload();}:null),
+      const SizedBox(height:14),PeriodSelector(value:period,onChanged:change),const SizedBox(height:14),
+      HeroMetricCard(title:'التدفق النقدي',value:farshaMoney(inflow-outflow),caption:'داخل ${farshaMoney(inflow)} • خارج ${farshaMoney(outflow)}',icon:Icons.account_balance_outlined,child:MiniLineChart(values:_dailySeries(sales),color:Colors.white,height:72)),
+      const SizedBox(height:12),KpiGrid(children:[
+        KpiCard(title:'المبيعات',value:farshaMoney(summary.salesAmount),icon:Icons.point_of_sale,accent:infoBlue),
+        KpiCard(title:'المحصل',value:farshaMoney(inflow),icon:Icons.payments_outlined,accent:positiveGreen),
+        KpiCard(title:'المستحق',value:farshaMoney(due),icon:Icons.schedule,accent:dangerRed),
+        KpiCard(title:'المصروفات',value:farshaMoney(outflow),icon:Icons.receipt_long,accent:warningOrange),
+      ]),
+      const SizedBox(height:22),const SectionTitle('طرق الدفع'),Card(child:Padding(padding:const EdgeInsets.all(16),child:DonutChart(values:summary.payments,labels:paymentLabels))),
+      const SizedBox(height:22),const SectionTitle('إجراءات المحاسب'),QuickActionsRow(actions:[
+        QuickActionData('مصروف',Icons.receipt_long_outlined,()=>widget.onNavigate(3),accent:warningOrange),
+        QuickActionData('دفع مورد',Icons.local_shipping_outlined,()=>widget.onNavigate(3),accent:infoBlue),
+        QuickActionData('تسوية بائع',Icons.person_outline,()=>widget.onNavigate(3),accent:positiveGreen),
+        QuickActionData('تسوية سائق',Icons.route_outlined,()=>widget.onNavigate(3),accent:partnerPurple),
+      ]),
+      const SizedBox(height:22),const SectionTitle('المهام المطلوبة'),
+      if(due==0)const EmptyState(title:'لا توجد مهام تحصيل معلقة في الفترة',icon:Icons.task_alt) else _AlertTile(icon:Icons.schedule,color:dangerRed,title:'تحصيلات تحتاج متابعة',subtitle:farshaMoney(due)),
+    ]));
+  });
+}
+
+class SellerDashboardV2 extends StatefulWidget {
+  const SellerDashboardV2({super.key, required this.profile, required this.membership, required this.repository, required this.onNavigate});
+  final UserProfile profile; final InstitutionMembership membership; final FarshaRepository repository; final ValueChanged<int> onNavigate;
+  @override State<SellerDashboardV2> createState()=>_SellerDashboardV2State();
+}
+class _SellerDashboardV2State extends State<SellerDashboardV2>{
+  late Future<(SellerPerformanceRecord,List<OperatingSaleRecord>)> data=load();
+  Future<(SellerPerformanceRecord,List<OperatingSaleRecord>)> load()async{final n=DateTime.now(),f=DateTime(n.year,n.month,1),t=DateTime(n.year,n.month+1,1);final a=await widget.repository.loadSellerPerformance(widget.membership.institutionId,widget.repository.userId,f,t),b=await widget.repository.loadDashboardSales(widget.membership.institutionId,f,t,sellerId:widget.repository.userId);return(a,b);}
+  @override Widget build(BuildContext context)=>FutureBuilder<(SellerPerformanceRecord,List<OperatingSaleRecord>)>(future:data,builder:(context,s){if(!s.hasData)return const _DashboardSkeleton();final p=s.data!.$1,sales=s.data!.$2;return RefreshIndicator(onRefresh:()async=>setState(()=>data=load()),child:ListView(padding:const EdgeInsets.fromLTRB(16,14,16,24),children:[
+    DashboardHeader(name:widget.profile.fullName,institution:widget.membership.institutionName,subtitle:'البائع'),
+    const SizedBox(height:14),
+    if(p.saleCount==0)EmptyState(title:'لا توجد مبيعات لك هذا الشهر',subtitle:'ابدأ أول بيعة وسيظهر أداؤك هنا.',icon:Icons.point_of_sale,actionLabel:'بيعة جديدة',onAction:()=>widget.onNavigate(1))else HeroMetricCard(title:'مبيعاتي هذا الشهر',value:farshaMoney(p.salesAmount),caption:'${p.saleCount} عملية • ${p.totalLength.toStringAsFixed(1)} متر',child:MiniLineChart(values:_dailySeries(sales),color:Colors.white,height:72)),
+    const SizedBox(height:12),KpiGrid(children:[
+      KpiCard(title:'عدد عملياتي',value:p.saleCount.toString(),icon:Icons.receipt_long_outlined,accent:infoBlue),
+      KpiCard(title:'الأمتار المباعة',value:'${p.totalLength.toStringAsFixed(1)} م',icon:Icons.straighten,accent:positiveGreen),
       KpiCard(title:'عمولتي',value:farshaMoney(p.commission),icon:Icons.workspace_premium_outlined,accent:partnerPurple),
       KpiCard(title:'المتبقي لي',value:farshaMoney(p.netDue),icon:Icons.account_balance_wallet_outlined,accent:warningOrange),
     ]),
@@ -379,7 +432,6 @@ class MoreHubV2 extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
       }
     }
-  }
   }
 }
 
