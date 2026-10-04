@@ -80,6 +80,58 @@ class _AuthPageState extends State<AuthPage> {
     ));
   }
 
+  Future<void> _sendPasswordReset() async {
+    final email = TextEditingController(text: _email.text.trim());
+    final formKey = GlobalKey<FormState>();
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('استعادة كلمة المرور'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: email,
+            autofocus: true,
+            keyboardType: TextInputType.emailAddress,
+            textDirection: TextDirection.ltr,
+            decoration: const InputDecoration(labelText: 'البريد الإلكتروني المسجل'),
+            validator: (value) => value == null || !value.trim().contains('@')
+                ? 'اكتب بريدًا صحيحًا'
+                : null,
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) Navigator.pop(dialogContext, true);
+            },
+            child: const Text('إرسال الرابط'),
+          ),
+        ],
+      ),
+    );
+    if (submitted != true) {
+      email.dispose();
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        email.text.trim(),
+        redirectTo: 'sa.farsha.app://auth/reset-password',
+      );
+      if (mounted) _message('إذا كان البريد مسجلاً، أرسلنا رابط إعادة تعيين كلمة المرور.');
+    } on AuthException {
+      if (mounted) _message('تعذر إرسال رابط إعادة التعيين. تحقق من البريد وحاول مرة أخرى.', error: true);
+    } catch (_) {
+      if (mounted) _message('تعذر إرسال الرابط. حاول مرة أخرى.', error: true);
+    } finally {
+      email.dispose();
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         body: SafeArea(
@@ -164,9 +216,121 @@ class _AuthPageState extends State<AuthPage> {
                             : Text(_register ? 'إنشاء الحساب' : 'دخول'),
                       ),
                     ),
+                    if (!_register)
+                      TextButton(
+                        onPressed: _busy ? null : _sendPasswordReset,
+                        child: const Text('نسيت كلمة المرور؟'),
+                      ),
                     TextButton(
                       onPressed: _busy ? null : () => setState(() => _register = !_register),
                       child: Text(_register ? 'لديك حساب؟ سجّل الدخول' : 'مستخدم جديد؟ أنشئ حسابًا'),
+                    ),
+                    if (!_register)
+                      const Text(
+                        'نسيت البريد الإلكتروني؟ تواصل مع الدعم',
+                        textAlign: TextAlign.center,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+class ResetPasswordPage extends StatefulWidget {
+  const ResetPasswordPage({super.key});
+
+  @override
+  State<ResetPasswordPage> createState() => _ResetPasswordPageState();
+}
+
+class _ResetPasswordPageState extends State<ResetPasswordPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _password = TextEditingController();
+  final _confirmation = TextEditingController();
+  bool _busy = false;
+  bool _obscure = true;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirmation.dispose();
+    super.dispose();
+  }
+
+  Future<void> _savePassword() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _busy = true);
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: _password.text),
+      );
+      await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
+    } on AuthException {
+      if (mounted) _message('تعذر حفظ كلمة المرور الجديدة. افتح رابط الاستعادة مرة أخرى.', error: true);
+    } catch (_) {
+      if (mounted) _message('تعذر حفظ كلمة المرور الجديدة. حاول مرة أخرى.', error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _message(String text, {bool error = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(text),
+      backgroundColor: error ? Theme.of(context).colorScheme.error : null,
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    const SizedBox(height: 70),
+                    const Icon(Icons.lock_reset_outlined, size: 64),
+                    const SizedBox(height: 18),
+                    Text('تعيين كلمة مرور جديدة', textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    const Text('اكتب كلمة المرور الجديدة ثم سجّل الدخول بها.', textAlign: TextAlign.center),
+                    const SizedBox(height: 24),
+                    TextFormField(
+                      controller: _password,
+                      obscureText: _obscure,
+                      decoration: InputDecoration(
+                        labelText: 'كلمة المرور الجديدة',
+                        suffixIcon: IconButton(
+                          onPressed: () => setState(() => _obscure = !_obscure),
+                          icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                        ),
+                      ),
+                      validator: (value) => value == null || value.length < 8 ? '8 أحرف على الأقل' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _confirmation,
+                      obscureText: _obscure,
+                      decoration: const InputDecoration(labelText: 'تأكيد كلمة المرور الجديدة'),
+                      validator: (value) => value != _password.text ? 'كلمتا المرور غير متطابقتين' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    FilledButton(
+                      onPressed: _busy ? null : _savePassword,
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: _busy
+                            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Text('حفظ كلمة المرور'),
+                      ),
                     ),
                   ],
                 ),

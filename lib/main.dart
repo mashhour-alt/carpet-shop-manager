@@ -97,15 +97,26 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   late User? _user = Supabase.instance.client.auth.currentUser;
+  bool _passwordRecovery = false;
   late final StreamSubscription<AuthState> _subscription;
   @override void initState() {
     super.initState();
     _subscription = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
-      if (mounted) setState(() => _user = state.session?.user);
+      if (mounted) {
+        setState(() {
+          _user = state.session?.user;
+          if (state.event == AuthChangeEvent.passwordRecovery) _passwordRecovery = true;
+          if (state.event == AuthChangeEvent.signedOut) _passwordRecovery = false;
+        });
+      }
     });
   }
   @override void dispose() { _subscription.cancel(); super.dispose(); }
-  @override Widget build(BuildContext context) => _user == null ? const AuthPage() : ProfileRouter(key: ValueKey(_user!.id));
+  @override Widget build(BuildContext context) => _passwordRecovery
+      ? const ResetPasswordPage()
+      : _user == null
+          ? const AuthPage()
+          : ProfileRouter(key: ValueKey(_user!.id));
 }
 
 class ConfigurationPage extends StatelessWidget {
