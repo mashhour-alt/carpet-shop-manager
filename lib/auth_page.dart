@@ -98,6 +98,22 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
     },
   );
 
+  Future<void> _recoverPassword() async {
+    final email = _email.text.trim();
+    if (!email.contains('@') || !email.contains('.')) {
+      _message('أدخل بريدك الإلكتروني أولاً', error: true);
+      return;
+    }
+    try {
+      await Supabase.instance.client.auth.resetPasswordForEmail(email);
+      if (mounted) _message('إذا كان البريد مسجلاً ستصلك رسالة لاستعادة كلمة المرور');
+    } on AuthException catch (error) {
+      if (mounted) _message(error.message, error: true);
+    } catch (_) {
+      if (mounted) _message('تعذر إرسال رسالة الاستعادة', error: true);
+    }
+  }
+
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _email = TextEditingController();
@@ -244,6 +260,11 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
                             : Text(_register ? 'إنشاء الحساب' : 'دخول'),
                       ),
                     ),
+                    if (!_register)
+                      TextButton(
+                        onPressed: _busy ? null : _recoverPassword,
+                        child: const Text('نسيت كلمة المرور؟'),
+                      ),
                     TextButton(
                       onPressed: _busy ? null : () => setState(() => _register = !_register),
                       child: Text(_register ? 'لديك حساب؟ سجّل الدخول' : 'مستخدم جديد؟ أنشئ حسابًا'),
