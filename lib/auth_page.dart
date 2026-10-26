@@ -18,7 +18,102 @@ class AuthPage extends StatefulWidget {
   State<AuthPage> createState() => _AuthPageState();
 }
 
-class _AuthPageState extends State<AuthPage> {
+class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin {
+  late final AnimationController _intro;
+  bool _opened = false;
+  @override
+  void initState() {
+    super.initState();
+    _intro = AnimationController(vsync: this, duration: const Duration(milliseconds: 850))
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) setState(() => _opened = true);
+      });
+  }
+  void _open() {
+    if (_opened) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _intro.value = 1;
+    } else {
+      _intro.forward();
+    }
+  }
+  Widget _carpet(double t) {
+    final scheme = Theme.of(context).colorScheme;
+    return Positioned.fill(child: SafeArea(child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _open,
+      onHorizontalDragUpdate: (d) {
+        if (!_opened) _intro.value = (_intro.value + d.delta.dx.abs() / 320).clamp(0.0, 1.0);
+      },
+      onHorizontalDragEnd: (_) => _open(),
+      onVerticalDragEnd: (_) => _open(),
+      child: Center(child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Semantics(label: 'سجادة فرشة، اضغط أو اسحب لفتحها', button: true,
+            child: SizedBox(width: 300, height: 260, child: Center(child: Stack(
+              alignment: Alignment.centerRight,
+              children: [
+                ClipRect(child: Align(alignment: Alignment.centerRight,
+                  widthFactor: (1 - t * .94).clamp(.06, 1.0),
+                  child: Container(width: 270, height: 220,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: scheme.primary, width: 3),
+                      color: scheme.surface,
+                      boxShadow: [BoxShadow(color: scheme.shadow.withValues(alpha: .15), blurRadius: 16)],
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Image.asset('assets/images/farsha_logo.jpeg', fit: BoxFit.contain),
+                  ),
+                )),
+                Container(width: 22, height: 234,
+                  decoration: BoxDecoration(color: scheme.primary, borderRadius: BorderRadius.circular(12))),
+              ],
+            ))),
+          ),
+          const SizedBox(height: 20),
+          Text('افرد السجادة للبدء', textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: scheme.primary, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          const Text('اضغط على السجادة أو اسحبها'),
+          const SizedBox(height: 16),
+          TextButton(onPressed: _open, child: const Text('متابعة إلى تسجيل الدخول')),
+        ]),
+      )),
+    )));
+  }
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _intro,
+    builder: (context, _) {
+      final t = Curves.easeInOutCubic.transform(_intro.value);
+      return Stack(children: [
+        IgnorePointer(ignoring: !_opened,
+          child: Opacity(opacity: t,
+            child: Transform.translate(offset: Offset(0, 24 * (1 - t)), child: _loginScreen(context)))),
+        if (!_opened) _carpet(t),
+      ]);
+    },
+  );
+
+  Future<void> _recoverPassword() async {
+    final email = _email.text.trim();
+    if (!email.contains('@') || !email.contains('.')) {
+      _message('أدخل بريدك الإلكتروني أولاً', error: true);
+      return;
+    }
+    try {
+      await Supabase.instance.client.auth.resetPasswordForEmail(email);
+      if (mounted) _message('إذا كان البريد مسجلاً ستصلك رسالة لاستعادة كلمة المرور');
+    } on AuthException catch (error) {
+      if (mounted) _message(error.message, error: true);
+    } catch (_) {
+      if (mounted) _message('تعذر إرسال رسالة الاستعادة', error: true);
+    }
+  }
+
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _email = TextEditingController();
@@ -31,6 +126,7 @@ class _AuthPageState extends State<AuthPage> {
 
   @override
   void dispose() {
+    _intro.dispose();
     _name.dispose();
     _email.dispose();
     _phone.dispose();
@@ -81,7 +177,7 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget _loginScreen(BuildContext context) => Scaffold(
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -164,6 +260,11 @@ class _AuthPageState extends State<AuthPage> {
                             : Text(_register ? 'إنشاء الحساب' : 'دخول'),
                       ),
                     ),
+                    if (!_register)
+                      TextButton(
+                        onPressed: _busy ? null : _recoverPassword,
+                        child: const Text('نسيت كلمة المرور؟'),
+                      ),
                     TextButton(
                       onPressed: _busy ? null : () => setState(() => _register = !_register),
                       child: Text(_register ? 'لديك حساب؟ سجّل الدخول' : 'مستخدم جديد؟ أنشئ حسابًا'),
