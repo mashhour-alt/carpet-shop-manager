@@ -14,16 +14,22 @@ Row Level Security.
 3. Create suppliers.
 4. Add inventory by item, colour, supplier, available length, supplier cost and seller wholesale price.
 5. Record a sale with 4m default width, calculated area, payment method, driver trip, glue and iron consumption.
-6. Deduct the sold running length in the same SQLite transaction.
+6. Deduct the sold running length atomically in the same PostgreSQL transaction.
 7. Calculate seller commission from the wholesale/sale-price difference.
 8. Connect one independent driver account to multiple institutions and show its account separately for each institution.
 9. Show monthly seller settlement and record withdrawals, expenses, deductions and payments.
 
 ## Supabase setup
 
-Apply `supabase/migrations/20260916105727_farsha_core.sql` to a Supabase
-project. The migration creates the tenant model, atomic stock deduction and
-sale calculation functions, and RLS policies.
+Apply every file in `supabase/migrations/` to a Supabase project, in filename
+order (`supabase db push` does this). `farsha_core` creates the tenant model,
+atomic stock deduction, sale calculation functions and RLS policies; later
+migrations add branches, partners, ledgers, subscriptions and ZATCA Phase 2
+invoice generation. The ZATCA UBL/signing logic lives in the
+`supabase/functions/generate-zatca-ubl` Edge Function.
+
+Every database change must be committed here as a migration file; never change
+the production schema from the dashboard only, or the repo and database drift.
 
 Build with these compile-time values:
 
