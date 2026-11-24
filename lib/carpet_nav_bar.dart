@@ -66,11 +66,12 @@ class _CarpetNavBarState extends State<CarpetNavBar> with SingleTickerProviderSt
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Container(
       height: _barHeight + bottomInset,
-      padding: EdgeInsets.only(bottom: bottomInset),
       decoration: const BoxDecoration(
         color: FarshaColors.paper,
         border: Border(top: BorderSide(color: FarshaColors.ink, width: 1.3)),
       ),
+      // Side room so the carpet fringes never touch the screen edge.
+      padding: EdgeInsets.only(bottom: bottomInset, left: 10, right: 10),
       child: LayoutBuilder(builder: (context, constraints) {
         final width = constraints.maxWidth;
         final count = widget.items.length;

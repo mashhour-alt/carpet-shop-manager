@@ -6,7 +6,7 @@ import 'farsha_theme.dart';
 import 'ui_v2_components.dart';
 
 const sar = '⃁';
-String money(double v) => sar + ' ' + arabicSeparators(v.toStringAsFixed(2));
+String money(double v) => sar + ' ' + ltrNumber(arabicSeparators(v.toStringAsFixed(2)));
 
 class AccountStatementsPage extends StatefulWidget {
   const AccountStatementsPage({

@@ -32,7 +32,11 @@ class FarshaApp extends StatelessWidget {
       title: 'فرشة',
       locale: const Locale('ar'),
       theme: buildFarshaTheme(),
-      builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child!),
+      scrollBehavior: const NotebookScrollBehavior(),
+      builder: (context, child) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: withFarshaTextScale(context, child!),
+      ),
       home: AppConfig.isConfigured ? const AuthGate() : const ConfigurationPage(),
     );
   }

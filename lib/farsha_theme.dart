@@ -56,7 +56,7 @@ ThemeData buildFarshaTheme() {
     fontFamilyFallback: const ['Noto Sans Arabic', 'Roboto'],
   );
   final text = base.textTheme
-      .apply(bodyColor: FarshaColors.ink, displayColor: FarshaColors.ink, fontSizeFactor: 1.08)
+      .apply(bodyColor: FarshaColors.ink, displayColor: FarshaColors.ink, fontSizeFactor: 1.05)
       .copyWith(
         headlineSmall: base.textTheme.headlineSmall?.copyWith(
           color: FarshaColors.inkBlue,
@@ -96,7 +96,9 @@ ThemeData buildFarshaTheme() {
     cardTheme: const CardThemeData(
       color: FarshaColors.paperCard,
       surfaceTintColor: Colors.transparent,
-      elevation: 0,
+      // A sheet laid on the page casts a small shadow onto the paper.
+      elevation: 1.5,
+      shadowColor: Color(0x5522304A),
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: farshaHandRadius, side: inkSide),
     ),
@@ -195,20 +197,50 @@ class NotebookPageTransitionsBuilder extends PageTransitionsBuilder {
 }
 
 /// Ruled notebook paper with a double red margin line on the reading side.
-class NotebookPaper extends StatelessWidget {
+///
+/// The ruled lines follow the page's main vertical scroll, so content and
+/// stickers move together with the paper instead of floating over it.
+class NotebookPaper extends StatefulWidget {
   const NotebookPaper({super.key, required this.child});
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-        painter: _NotebookPainter(rtl: Directionality.of(context) == TextDirection.rtl),
-        child: child,
+  State<NotebookPaper> createState() => _NotebookPaperState();
+}
+
+class _NotebookPaperState extends State<NotebookPaper> {
+  final _scroll = ValueNotifier<double>(0);
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  bool _onScroll(ScrollNotification notification) {
+    if (notification.depth == 0 && notification.metrics.axis == Axis.vertical) {
+      _scroll.value = notification.metrics.pixels;
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) => NotificationListener<ScrollNotification>(
+        onNotification: _onScroll,
+        child: CustomPaint(
+          painter: _NotebookPainter(
+            rtl: Directionality.of(context) == TextDirection.rtl,
+            scroll: _scroll,
+          ),
+          child: RepaintBoundary(child: widget.child),
+        ),
       );
 }
 
 class _NotebookPainter extends CustomPainter {
-  const _NotebookPainter({required this.rtl});
+  _NotebookPainter({required this.rtl, required this.scroll}) : super(repaint: scroll);
   final bool rtl;
+  final ValueListenable<double> scroll;
 
   static const _lineGap = 36.0;
 
@@ -218,13 +250,15 @@ class _NotebookPainter extends CustomPainter {
     final rule = Paint()
       ..color = FarshaColors.rule
       ..strokeWidth = 1;
-    for (var y = _lineGap + 18; y < size.height; y += _lineGap) {
+    final shift = ((scroll.value % _lineGap) + _lineGap) % _lineGap;
+    for (var y = _lineGap + 18 - shift; y < size.height; y += _lineGap) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), rule);
     }
+    // Close to the edge so it never runs through page content.
     final margin = Paint()
       ..color = FarshaColors.margin
       ..strokeWidth = 1.6;
-    final x = rtl ? size.width - 28 : 28.0;
+    final x = rtl ? size.width - 10 : 10.0;
     final x2 = rtl ? x - 4 : x + 4;
     canvas.drawLine(Offset(x, 0), Offset(x, size.height), margin);
     canvas.drawLine(
@@ -237,8 +271,34 @@ class _NotebookPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_NotebookPainter oldDelegate) => oldDelegate.rtl != rtl;
+  bool shouldRepaint(_NotebookPainter oldDelegate) => oldDelegate.rtl != rtl || oldDelegate.scroll != scroll;
 }
+
+/// Paper does not stretch or glow when you pull past the end, and the page
+/// stops where the paper stops, so lines and content stay glued together.
+class NotebookScrollBehavior extends MaterialScrollBehavior {
+  const NotebookScrollBehavior();
+
+  @override
+  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) => child;
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) => const ClampingScrollPhysics();
+}
+
+/// Larger handwriting everywhere (Ruqaa reads small), on top of the user's
+/// own accessibility text size.
+Widget withFarshaTextScale(BuildContext context, Widget child) {
+  final media = MediaQuery.of(context);
+  return MediaQuery(
+    data: media.copyWith(textScaler: TextScaler.linear(media.textScaler.scale(100) / 100 * 1.15)),
+    child: child,
+  );
+}
+
+/// Keeps a signed amount in left-to-right order inside Arabic text, so the
+/// minus sign stays attached to the front of the number.
+String ltrNumber(String text) => '⁦$text⁩';
 
 /// Arabic text for Supabase Auth errors (the API answers in English).
 String arabicAuthMessage(String message) {
@@ -269,4 +329,5 @@ BoxDecoration farshaPaperDecoration({Color? color}) => BoxDecoration(
       color: color ?? FarshaColors.paperCard,
       borderRadius: farshaHandRadius,
       border: Border.all(color: FarshaColors.ink, width: 1.2),
+      boxShadow: const [BoxShadow(color: Color(0x3322304A), blurRadius: 3, offset: Offset(1.5, 2.5))],
     );

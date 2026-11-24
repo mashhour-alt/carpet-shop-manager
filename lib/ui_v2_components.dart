@@ -13,8 +13,8 @@ const dangerRed = Color(0xffC53B3B);
 const sarSign = '⃁';
 
 String farshaMoney(double value) => value.abs() >= 1000
-    ? '${arabicSeparators(value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ','))} $sarSign'
-    : '${arabicSeparators(value.toStringAsFixed(2))} $sarSign';
+    ? '${ltrNumber(arabicSeparators(value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',')))} $sarSign'
+    : '${ltrNumber(arabicSeparators(value.toStringAsFixed(2)))} $sarSign';
 
 enum DashboardPeriod { today, week, month, custom }
 
