@@ -2,10 +2,11 @@ import 'account_live.dart';
 import 'package:flutter/material.dart';
 import 'cloud_models.dart';
 import 'farsha_repository.dart';
+import 'farsha_theme.dart';
 import 'ui_v2_components.dart';
 
 const sar = '⃁';
-String money(double v) => sar + ' ' + v.toStringAsFixed(2);
+String money(double v) => sar + ' ' + arabicSeparators(v.toStringAsFixed(2));
 
 class AccountStatementsPage extends StatefulWidget {
   const AccountStatementsPage({

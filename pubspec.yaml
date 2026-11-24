@@ -27,6 +27,14 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/farsha_logo.jpeg
+  fonts:
+    # Aref Ruqaa (SIL OFL 1.1, see assets/fonts/OFL.txt) with Latin digits
+    # mapped to Arabic-Indic digit glyphs.
+    - family: FarshaRuqaa
+      fonts:
+        - asset: assets/fonts/FarshaRuqaa-Regular.ttf
+        - asset: assets/fonts/FarshaRuqaa-Bold.ttf
+          weight: 700
 
 flutter_launcher_icons:
   android: true

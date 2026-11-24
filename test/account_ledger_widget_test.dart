@@ -31,7 +31,7 @@ void main() {
     repo.balance=-112;repo.events.add(null);
     await tester.pumpAndSettle();
     expect(find.text('الرصيد الحالي • عليه'),findsOneWidget);
-    expect(find.textContaining('112.00'),findsOneWidget);
+    expect(find.textContaining('112\u066B00'),findsOneWidget);
     expect(repo.loads,2);
     await tester.pumpWidget(const SizedBox());
     expect(repo.events.hasListener,isFalse);

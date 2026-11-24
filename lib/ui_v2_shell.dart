@@ -5,8 +5,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'account_statements_page.dart';
 import 'branch_report_page.dart';
 import 'branches_partners_page.dart';
+import 'carpet_nav_bar.dart';
 import 'cloud_models.dart';
 import 'documents_page.dart';
+import 'farsha_theme.dart';
 import 'farsha_repository.dart';
 import 'home_pages.dart' show MembersPage;
 import 'inventory_workspace_page.dart';
@@ -47,15 +49,15 @@ class _FarshaShellV2State extends State<FarshaShellV2> {
       return Scaffold(
         appBar: AppBar(toolbarHeight: 44, actions: [AccountNotifications(repository: widget.repository)]),
         body: SafeArea(child: IndexedStack(index: index, children: pages)),
-        bottomNavigationBar: NavigationBar(
+        bottomNavigationBar: CarpetNavBar(
           selectedIndex: index,
-          onDestinationSelected: go,
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-            NavigationDestination(icon: Icon(Icons.point_of_sale_outlined), selectedIcon: Icon(Icons.point_of_sale), label: 'البيع'),
-            NavigationDestination(icon: Icon(Icons.inventory_2_outlined), selectedIcon: Icon(Icons.inventory_2), label: 'المخزون'),
-            NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet), label: 'الحسابات'),
-            NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'المزيد'),
+          onSelected: go,
+          items: const [
+            CarpetNavItem(icon: Icons.menu_book_outlined, label: 'الدفتر'),
+            CarpetNavItem(icon: Icons.point_of_sale_outlined, label: 'البيع'),
+            CarpetNavItem(icon: Icons.inventory_2_outlined, label: 'المخزون'),
+            CarpetNavItem(icon: Icons.account_balance_wallet_outlined, label: 'الحسابات'),
+            CarpetNavItem(icon: Icons.grid_view_rounded, label: 'المزيد'),
           ],
         ),
       );
@@ -165,7 +167,7 @@ class _OwnerDashboardV2State extends State<OwnerDashboardV2> {
           if (d.summary.saleCount == 0)
             EmptyState(title: 'لا توجد مبيعات في هذه الفترة', subtitle: 'ابدأ أول عملية بيع وسيظهر أداء المؤسسة هنا.', icon: Icons.point_of_sale_outlined, actionLabel: 'بيعة جديدة', onAction: () => widget.onNavigate(1))
           else ...[
-            HeroMetricCard(title: 'إجمالي المبيعات', value: farshaMoney(d.summary.salesAmount), caption: '${d.summary.saleCount} عملية • ${d.summary.totalLength.toStringAsFixed(1)} متر', child: MiniLineChart(values: trend, color: Colors.white, height: 76)),
+            HeroMetricCard(title: 'إجمالي المبيعات', value: farshaMoney(d.summary.salesAmount), caption: '${d.summary.saleCount} عملية • ${d.summary.totalLength.toStringAsFixed(1)} متر', child: MiniLineChart(values: trend, color: FarshaColors.inkBlue, height: 76)),
             const SizedBox(height: 12),
             KpiGrid(children: [
               KpiCard(title: 'صافي الربح', value: farshaMoney(net), icon: Icons.auto_graph_rounded, accent: positiveGreen),
@@ -296,7 +298,7 @@ class _AccountantDashboardV2State extends State<AccountantDashboardV2> {
     return RefreshIndicator(onRefresh:()async=>reload(),child:ListView(padding:const EdgeInsets.fromLTRB(16,14,16,24),children:[
       DashboardHeader(name:widget.profile.fullName,institution:widget.membership.institutionName,subtitle:'المحاسب',branches:branches,selectedBranchId:branchId,onBranchChanged:branches.length>1?(v){branchId=v;reload();}:null),
       const SizedBox(height:14),PeriodSelector(value:period,onChanged:change),const SizedBox(height:14),
-      HeroMetricCard(title:'التدفق النقدي',value:farshaMoney(inflow-outflow),caption:'داخل ${farshaMoney(inflow)} • خارج ${farshaMoney(outflow)}',icon:Icons.account_balance_outlined,child:MiniLineChart(values:_dailySeries(sales),color:Colors.white,height:72)),
+      HeroMetricCard(title:'التدفق النقدي',value:farshaMoney(inflow-outflow),caption:'داخل ${farshaMoney(inflow)} • خارج ${farshaMoney(outflow)}',icon:Icons.account_balance_outlined,child:MiniLineChart(values:_dailySeries(sales),color:FarshaColors.inkBlue,height:72)),
       const SizedBox(height:12),KpiGrid(children:[
         KpiCard(title:'المبيعات',value:farshaMoney(summary.salesAmount),icon:Icons.point_of_sale,accent:infoBlue),
         KpiCard(title:'المحصل',value:farshaMoney(inflow),icon:Icons.payments_outlined,accent:positiveGreen),
@@ -327,7 +329,7 @@ class _SellerDashboardV2State extends State<SellerDashboardV2>{
   @override Widget build(BuildContext context)=>FutureBuilder<(SellerPerformanceRecord,List<OperatingSaleRecord>)>(future:data,builder:(context,s){if(!s.hasData)return const _DashboardSkeleton();final p=s.data!.$1,sales=s.data!.$2;return RefreshIndicator(onRefresh:()async=>setState(()=>data=load()),child:ListView(padding:const EdgeInsets.fromLTRB(16,14,16,24),children:[
     DashboardHeader(name:widget.profile.fullName,institution:widget.membership.institutionName,subtitle:'البائع'),
     const SizedBox(height:14),
-    if(p.saleCount==0)EmptyState(title:'لا توجد مبيعات لك هذا الشهر',subtitle:'ابدأ أول بيعة وسيظهر أداؤك هنا.',icon:Icons.point_of_sale,actionLabel:'بيعة جديدة',onAction:()=>widget.onNavigate(1))else HeroMetricCard(title:'مبيعاتي هذا الشهر',value:farshaMoney(p.salesAmount),caption:'${p.saleCount} عملية • ${p.totalLength.toStringAsFixed(1)} متر',child:MiniLineChart(values:_dailySeries(sales),color:Colors.white,height:72)),
+    if(p.saleCount==0)EmptyState(title:'لا توجد مبيعات لك هذا الشهر',subtitle:'ابدأ أول بيعة وسيظهر أداؤك هنا.',icon:Icons.point_of_sale,actionLabel:'بيعة جديدة',onAction:()=>widget.onNavigate(1))else HeroMetricCard(title:'مبيعاتي هذا الشهر',value:farshaMoney(p.salesAmount),caption:'${p.saleCount} عملية • ${p.totalLength.toStringAsFixed(1)} متر',child:MiniLineChart(values:_dailySeries(sales),color:FarshaColors.inkBlue,height:72)),
     const SizedBox(height:12),KpiGrid(children:[
       KpiCard(title:'عدد عملياتي',value:p.saleCount.toString(),icon:Icons.receipt_long_outlined,accent:infoBlue),
       KpiCard(title:'الأمتار المباعة',value:'${p.totalLength.toStringAsFixed(1)} م',icon:Icons.straighten,accent:positiveGreen),
@@ -363,7 +365,7 @@ class _PartnerDashboardV2State extends State<PartnerDashboardV2>{
         if(admin&&pct==0)
           const EmptyState(title:'صلاحيات إدارية',subtitle:'هذا الحساب شريك إداري بنسبة استحقاق 0%، لذلك لا نعرض أرباحًا غير موجودة.',icon:Icons.admin_panel_settings_outlined)
         else ...[
-          HeroMetricCard(title:'نصيبي المستحق',value:farshaMoney(balance),caption:'نسبة الاستحقاق ${pct.toStringAsFixed(1)}%',icon:Icons.handshake_outlined,child:MiniLineChart(values:rows.reversed.map((x)=>(x['running_balance'] as num).toDouble()).toList(),color:Colors.white,height:72)),
+          HeroMetricCard(title:'نصيبي المستحق',value:farshaMoney(balance),caption:'نسبة الاستحقاق ${pct.toStringAsFixed(1)}%',icon:Icons.handshake_outlined,child:MiniLineChart(values:rows.reversed.map((x)=>(x['running_balance'] as num).toDouble()).toList(),color:FarshaColors.inkBlue,height:72)),
           const SizedBox(height:12),KpiGrid(children:[
             KpiCard(title:'الاستحقاقات',value:farshaMoney(entitlement),icon:Icons.trending_up,accent:partnerPurple),
             KpiCard(title:'تم توزيعه',value:farshaMoney(distributed),icon:Icons.payments_outlined,accent:positiveGreen),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'cloud_models.dart';
+import 'farsha_theme.dart';
 
 const farshaBurgundy = Color(0xff861B2C);
 const farshaCream = Color(0xffF7F3EA);
@@ -12,8 +13,8 @@ const dangerRed = Color(0xffC53B3B);
 const sarSign = '⃁';
 
 String farshaMoney(double value) => value.abs() >= 1000
-    ? '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',')} $sarSign'
-    : '${value.toStringAsFixed(2)} $sarSign';
+    ? '${arabicSeparators(value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ','))} $sarSign'
+    : '${arabicSeparators(value.toStringAsFixed(2))} $sarSign';
 
 enum DashboardPeriod { today, week, month, custom }
 
@@ -117,21 +118,69 @@ class HeroMetricCard extends StatelessWidget {
   final IconData icon;
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(colors: [Color(0xff861B2C), Color(0xffA32B3E)], begin: Alignment.topRight, end: Alignment.bottomLeft),
-      borderRadius: BorderRadius.circular(24),
-      boxShadow: [BoxShadow(color: farshaBurgundy.withValues(alpha: .14), blurRadius: 22, offset: const Offset(0, 8))],
-    ),
-    padding: const EdgeInsets.all(20),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [Expanded(child: Text(title, style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600))), Icon(icon, color: Colors.white70)]),
-      const SizedBox(height: 8),
-      FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerRight, child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w900))),
-      if (caption != null) ...[const SizedBox(height: 4), Text(caption!, style: const TextStyle(color: Colors.white70, fontSize: 12))],
-      if (child != null) ...[const SizedBox(height: 16), child!],
+  Widget build(BuildContext context) => Transform.rotate(
+    angle: -0.008,
+    child: Stack(clipBehavior: Clip.none, children: [
+      Container(
+        width: double.infinity,
+        decoration: farshaPaperDecoration().copyWith(
+          boxShadow: [BoxShadow(color: FarshaColors.ink.withValues(alpha: .12), offset: const Offset(3, 4))],
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(child: Text(title, style: const TextStyle(color: FarshaColors.muted, fontSize: 17))),
+            Icon(icon, color: FarshaColors.muted),
+          ]),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(value, style: const TextStyle(color: FarshaColors.inkBlue, fontSize: 46, fontWeight: FontWeight.w700, height: 1.15)),
+          ),
+          CustomPaint(size: const Size(170, 10), painter: _ScribblePainter()),
+          if (caption != null) ...[const SizedBox(height: 4), Text(caption!, style: const TextStyle(color: FarshaColors.muted, fontSize: 15))],
+          if (child != null) ...[const SizedBox(height: 14), child!],
+        ]),
+      ),
+      // A strip of tape holding the sheet on the page.
+      Positioned(
+        top: -11,
+        left: 0,
+        right: 0,
+        child: Center(
+          child: Transform.rotate(
+            angle: 0.05,
+            child: Container(width: 86, height: 22, color: const Color(0xffD6C496).withValues(alpha: .75)),
+          ),
+        ),
+      ),
     ]),
   );
+}
+
+/// Red hand-drawn underline.
+class _ScribblePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final h = size.height;
+    final w = size.width;
+    final path = Path()
+      ..moveTo(2, h * .7)
+      ..cubicTo(w * .22, h * .15, w * .42, h * .95, w * .62, h * .45)
+      ..cubicTo(w * .78, h * .1, w * .9, h * .4, w - 2, h * .6);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = FarshaColors.margin
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ScribblePainter oldDelegate) => false;
 }
 
 class KpiCard extends StatelessWidget {
@@ -205,7 +254,7 @@ class QuickActionsRow extends StatelessWidget {
         child: Container(
           width: 92,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xffEAE3DA))),
+          decoration: farshaPaperDecoration(),
           child: Column(children: [
             Container(width: 38, height: 38, decoration: BoxDecoration(color: a.accent.withValues(alpha: .10), borderRadius: BorderRadius.circular(12)), child: Icon(a.icon, color: a.accent, size: 20)),
             const SizedBox(height: 7),
@@ -228,7 +277,7 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: double.infinity,
     padding: const EdgeInsets.all(24),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xffEAE3DA))),
+    decoration: farshaPaperDecoration(),
     child: Column(children: [
       Icon(icon, size: 38, color: Colors.grey.shade400),
       const SizedBox(height: 10),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'farsha_theme.dart';
+
 enum RegistrationType { owner, staff, driver }
 
 extension RegistrationTypeLabel on RegistrationType {
@@ -65,7 +67,7 @@ class _AuthPageState extends State<AuthPage> {
         );
       }
     } on AuthException catch (error) {
-      if (mounted) _message(error.message, error: true);
+      if (mounted) _message(arabicAuthMessage(error.message), error: true);
     } catch (_) {
       if (mounted) _message('تعذر الاتصال. حاول مرة أخرى.', error: true);
     } finally {
@@ -144,10 +146,28 @@ class _AuthPageState extends State<AuthPage> {
                   padding: const EdgeInsets.all(24),
                   children: [
                     Center(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(28),
-                        child: Image.asset('assets/images/farsha_logo.jpeg', width: 150, height: 150),
+                      child: Transform.rotate(
+                        angle: -0.02,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: FarshaColors.paperCard,
+                            borderRadius: farshaHandRadius,
+                            border: Border.all(color: FarshaColors.ink, width: 1.3),
+                            boxShadow: [BoxShadow(color: FarshaColors.ink.withValues(alpha: .12), offset: const Offset(3, 4))],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.asset('assets/images/farsha_logo.jpeg', width: 140, height: 140),
+                          ),
+                        ),
                       ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'دفترك… بس بيحسب لوحده',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 18, color: FarshaColors.muted),
                     ),
                     const SizedBox(height: 18),
                     Text(
@@ -176,6 +196,7 @@ class _AuthPageState extends State<AuthPage> {
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
                       textDirection: TextDirection.ltr,
+                      style: farshaLatinStyle,
                       decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
                       validator: (value) => value == null || !value.trim().contains('@')
                           ? 'اكتب بريدًا صحيحًا'
@@ -197,6 +218,7 @@ class _AuthPageState extends State<AuthPage> {
                     TextFormField(
                       controller: _password,
                       obscureText: _obscure,
+                      style: farshaLatinStyle,
                       decoration: InputDecoration(
                         labelText: 'كلمة المرور',
                         suffixIcon: IconButton(
