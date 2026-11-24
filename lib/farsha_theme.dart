@@ -240,7 +240,7 @@ class _NotebookPaperState extends State<NotebookPaper> {
 class _NotebookPainter extends CustomPainter {
   _NotebookPainter({required this.rtl, required this.scroll}) : super(repaint: scroll);
   final bool rtl;
-  final ValueListenable<double> scroll;
+  final ValueNotifier<double> scroll;
 
   static const _lineGap = 36.0;
 
